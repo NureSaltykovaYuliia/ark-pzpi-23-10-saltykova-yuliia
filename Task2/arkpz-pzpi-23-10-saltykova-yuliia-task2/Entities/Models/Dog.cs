@@ -10,10 +10,10 @@ namespace Entities.Models
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public string Breed { get; set; } // Порода
-        public string Description { get; set; }
+        public string? Breed { get; set; } // Порода
+        public string? Description { get; set; }
         public DateTime DateOfBirth { get; set; }
-        public string PhotoUrl { get; set; } 
+        public string? PhotoUrl { get; set; } 
 
         // Зв'язок "один-до-багатьох": у собаки є один власник
         public int OwnerId { get; set; }
