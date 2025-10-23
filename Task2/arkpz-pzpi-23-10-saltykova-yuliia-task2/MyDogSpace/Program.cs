@@ -24,6 +24,9 @@ public class Program
         builder.Services.AddScoped<IAuthService, AuthService>();
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<IDogRepository, DogRepository>();
+        builder.Services.AddScoped<IEventRepository, EventRepository>();
+        builder.Services.AddScoped<IPartnerRepository, PartnerRepository>();
+        builder.Services.AddScoped<ISmartDeviceRepository, SmartDeviceRepository>();
 
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -45,7 +48,7 @@ public class Program
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
                 In = ParameterLocation.Header,
-                Description = "??????? 'Bearer', ??????, ? ????? ??? ?????",
+                Description = " 'Bearer'",
                 Name = "Authorization",
                 Type = SecuritySchemeType.Http,
                 BearerFormat = "JWT",
