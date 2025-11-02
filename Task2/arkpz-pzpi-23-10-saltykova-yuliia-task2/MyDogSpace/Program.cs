@@ -5,7 +5,8 @@ using Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models; 
+using Microsoft.OpenApi.Models;
+using MyDogSpace.Hubs;
 using System.Text;
 
 public class Program
@@ -27,6 +28,9 @@ public class Program
         builder.Services.AddScoped<IEventRepository, EventRepository>();
         builder.Services.AddScoped<IPartnerRepository, PartnerRepository>();
         builder.Services.AddScoped<ISmartDeviceRepository, SmartDeviceRepository>();
+        builder.Services.AddScoped<IConversationRepository, ConversationRepository>(); 
+        builder.Services.AddScoped<IMessageRepository, MessageRepository>();
+        builder.Services.AddSignalR();
 
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -81,6 +85,7 @@ public class Program
         app.UseHttpsRedirection();
         app.UseAuthentication();
         app.UseAuthorization();
+        app.MapHub<ChatHub>("/chathub");
         app.MapControllers();
         app.Run();
     }

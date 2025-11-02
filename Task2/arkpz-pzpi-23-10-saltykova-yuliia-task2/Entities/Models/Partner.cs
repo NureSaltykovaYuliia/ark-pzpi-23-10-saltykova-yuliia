@@ -9,7 +9,7 @@ namespace Entities.Models
     public class Partner
     {
         public int Id { get; set; }
-        public string Name { get; set; } // Назва клініки, магазину
+        public string Name { get; set; } = string.Empty;
         public string Description { get; set; }
         public string Address { get; set; } 
         public string PhoneNumber { get; set; }

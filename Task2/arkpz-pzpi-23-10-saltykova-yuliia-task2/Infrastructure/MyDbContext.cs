@@ -19,8 +19,10 @@ namespace Infrastructure
         public DbSet<Event> Events { get; set; }
         public DbSet<Partner> Partners { get; set; }
         public DbSet<SmartDevice> SmartDevices { get; set; }
+        public DbSet<Conversation> Conversations { get; set; }
+        public DbSet<Message> Messages { get; set; }
 
-       
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

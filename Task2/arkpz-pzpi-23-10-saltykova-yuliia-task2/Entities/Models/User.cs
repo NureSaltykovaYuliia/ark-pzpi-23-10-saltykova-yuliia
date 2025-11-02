@@ -25,5 +25,11 @@ namespace Entities.Models
         public ICollection<User> Friends { get; set; } = new List<User>(); // Мої друзі
         public ICollection<Event> Events { get; set; } = new List<Event>(); // Події, в яких я беру участь
         public ICollection<Event> OrganizedEvents { get; set; } = new List<Event>(); // Події, які я організував
+
+        // Розмови, в яких я беру участь
+        public ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
+
+        // Повідомлення, які я відправив
+        public ICollection<Message> SentMessages { get; set; } = new List<Message>();
     }
 }

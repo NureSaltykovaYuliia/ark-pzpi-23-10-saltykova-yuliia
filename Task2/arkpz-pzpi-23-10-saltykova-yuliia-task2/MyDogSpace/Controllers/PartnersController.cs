@@ -55,7 +55,7 @@ namespace MyDogSpace.Controllers
             return Ok(partnerDto);
         }
 
-        [Authorize(Roles = "Admin,Business")]
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> CreatePartner([FromBody] CreateUpdatePartnerDto partnerDto)
         {
@@ -77,7 +77,7 @@ namespace MyDogSpace.Controllers
             return CreatedAtAction(nameof(GetPartnerById), new { id = createdPartner.Id }, createdPartner);
         }
 
-        [Authorize(Roles = "Admin,Business")]
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdatePartner(int id, [FromBody] CreateUpdatePartnerDto partnerDto)
         {
