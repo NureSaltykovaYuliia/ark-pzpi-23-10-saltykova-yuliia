@@ -1,0 +1,516 @@
+МІНІСТЕРСТВО ОСВІТИ І НАУКИ УКРАЇНИ 
+ХАРКІВСЬКИЙ НАЦІОНАЛЬНИЙ УНІВЕРСИТЕТ РАДІОЕЛЕКТРОНІКИ
+
+
+Кафедра «Програмної інженерії»
+
+
+
+ЗВІТ
+з практичної роботи
+з дисципліни «Аналіз та рефакторінг коду»
+на тему «Методи рефакторингу: Push Down Method, Self Encapsulate Field, Consolidate Duplicate Conditional Fragments для мови програмування PHP»
+
+ 
+
+Виконала:
+ст. гр. ПЗПІ-23-10
+Салтикова Ю.М.
+
+Перевірив:
+старший викл. Кафедри ПІ
+Сокорчук І.П.
+
+
+Харків 2025
+
+1 ІСТОРІЯ ЗМІН
+№	Дата	Версія звіту	Опис змін та виправлень
+1	01.11.2025	0.1	 Створено розділ “Завдання”, “Опис виконаної роботи”,”Висновки”
+2	02.11.2025	0.1	Створено “Додаток Б”,“Додаток В”
+3	03.11.2025	0.1	Створено “Додаток A”
+
+
+　　　　　2 ЗАВДАННЯ
+　　　　　Мета роботи
+　　　Метою моєї роботи було вивчення та аналіз методів рефакторингу коду мовою програмування PHP, зокрема таких прийомів, як Push Down Method, Self Encapsulate Field та Consolidate Duplicate Conditional Fragments. У ході роботи я прагнула розібратися в призначенні, особливостях і перевагах цих методів, а також зрозуміти, як їх застосування впливає на якість, структуру та підтримуваність програмного коду.
+　　　Також метою було сформувати цілісне уявлення про роль рефакторингу у процесі розробки програмного забезпечення, його значення для оптимізації логіки, підвищення читабельності та зменшення дублювання коду. Розуміння принципів використання зазначених методів дозволяє створювати більш гнучкі, зрозумілі та масштабовані PHP-програми.
+
+
+　　　　　3 ОПИС ВИКОНАНОЇ РОБОТИ
+　　　　　Хід Роботи
+　　　3.1 Вступ
+　　　Рефакторинг — це процес зміни внутрішньої структури програмного коду без зміни його зовнішньої поведінки. Його головна мета полягає не у створенні нової функціональності, а в покращенні якості вже існуючого коду — його структури, логіки, організації та читабельності.
+У практиці розробки програмного забезпечення часто трапляються ситуації, коли код виконує свою функцію правильно, але стає важким для розуміння, тестування або розширення. У таких випадках використовується рефакторинг, який дозволяє зробити код чистішим, логічнішим і легшим у підтримці.
+　　　У цій роботі було розглянуто три ефективні методи рефакторингу для мови програмування PHP: Push Down Method, Self Encapsulate Field та Consolidate Duplicate Conditional Fragments. Вони спрямовані на покращення архітектури коду, усунення дублювання й підвищення рівня інкапсуляції.
+　　　3.2 Методи рефакторингу, що розглядаються
+　　　3.2.1 Push Down Method
+　　　Метод Push Down Method застосовується тоді, коли базовий (батьківський) клас містить методи, які насправді належать лише окремим підкласам. У таких випадках методи потрібно перемістити («спустити вниз») у відповідні підкласи, щоб зробити ієрархію класів логічнішою.
+　　　Наприклад, якщо у базовому класі User реалізовано метод banUser(), який використовується лише для адміністратора, то цей метод доцільно перемістити у клас Admin, який його реально застосовує. Це дозволяє очистити базовий клас і уникнути ситуацій, коли звичайний користувач (StandardUser) успадковує непотрібний йому функціонал (Див. додаток  В.1).
+　　　Після рефакторингу клас User містить лише спільні методи (наприклад, login()), тоді як клас Admin інкапсулює специфічну для нього логіку блокування користувачів (Див. додаток  В.2).
+　　　3.2.2 Self Encapsulate Field 
+　　　Метод Self Encapsulate Field полягає у заміні прямого доступу до полів класу на використання геттерів і сетерів, навіть усередині самого класу. Такий підхід підвищує інкапсуляцію, дозволяє централізовано контролювати доступ до даних і спрощує зміну логіки зберігання або перевірки значень.
+　　　Наприклад, у класі Product поле $price може використовуватися безпосередньо у кількох методах. Якщо потрібно додати перевірку або форматування ціни, довелося б змінювати кожне місце, де це поле використовується(Див. додаток  В.3).
+　　　 Після застосування методу самоінкапсуляції створюються методи getPrice() і setPrice(), через які відбувається доступ до поля $price.(Див. додаток  В.4).
+　　　Такий підхід дозволяє зосередити всю логіку роботи зі значенням у одному місці. Якщо потрібно змінити перевірку або додати логування, достатньо відредагувати лише аксесори.
+　　　3.2.3 Consolidate Duplicate Conditional Fragments
+　　　Цей метод використовується, коли в різних гілках умовних операторів (if, else, switch) повторюються однакові фрагменти коду. Таке дублювання ускладнює підтримку програми, оскільки при зміні логіки потрібно редагувати кілька частин коду.
+　　　Наприклад, у методі calculateShipping() може повторюватися один і той самий виклик функції надсилання повідомлення користувачу або додавання вартості доставки до загальної ціни в обох гілках умов(Див. додаток  В.5).
+　　　У такому випадку спільний код доцільно винести за межі конструкції if-else, залишивши всередині лише відмінну логіку — наприклад, розрахунок конкретної вартості доставки.(Див. додаток  В.6).
+　　　Цей метод дозволяє позбутися дублювання, зробити код коротшим і зрозумілішим, а також забезпечує дотримання принципу DRY (Don’t Repeat Yourself).
+
+
+　　　　　4 ВИСНОВКИ
+　　　　У результаті виконання роботи було досліджено сутність і практичне застосування трьох методів рефакторингу програмного коду — Push Down Method, Self Encapsulate Field та Consolidate Duplicate Conditional Fragments. Кожен із них вирішує конкретні проблеми, пов’язані з організацією, структурою та якістю коду в мові програмування PHP.
+　　　　Під час аналізу методу Push Down Method було з’ясовано, що він дає змогу зробити ієрархію класів більш логічною, видаляючи з базового класу методи, які стосуються лише окремих підкласів. Такий підхід допомагає уникнути дублювання функціональності й робить код гнучкішим і зрозумілішим. У результаті базовий клас містить лише спільні методи, а кожен підклас реалізує лише властиву йому поведінку.
+　　　　Метод Self Encapsulate Field показав, наскільки важливо забезпечувати інкапсуляцію даних і централізований доступ до властивостей класу. Завдяки використанню геттерів і сетерів, навіть усередині самого класу, код стає більш контрольованим і безпечним. Це особливо важливо в умовах розширення програмного продукту, коли потрібно змінити логіку роботи з даними або додати перевірку введення без порушення структури програми. Такий підхід підвищує стабільність системи, спрощує налагодження та підтримку.
+　　　　Метод Consolidate Duplicate Conditional Fragments довів свою ефективність у спрощенні коду та усуненні дублювання. Винесення спільних частин умовних операторів за межі конструкцій if або switch допомагає уникнути повторів, полегшує подальші зміни й підвищує читабельність коду. Крім того, зменшення дублювання знижує ризик помилок під час редагування, адже змінювати потрібно лише одну частину програми, а не кілька схожих блоків.
+　　　　Загалом, результати роботи підтверджують, що систематичне застосування методів рефакторингу є необхідною умовою якісної розробки програмного забезпечення. Вони не лише покращують структуру коду, а й підвищують його гнучкість, стабільність і зрозумілість для інших розробників.
+
+
+　　　　5 ВИКОРИСТАНІ ДЖЕРЕЛА
+　　　1.Refactoring.Guru: Інтерактивний веб-сайт з чудовими ілюстраціями та прикладами  методів рефакторингу та патернів проєктування (має приклади на PHP).URL: https://refactoring.guru/ (Дата звернення: 01.11.2025).
+　　　2.Martin, Robert C. Clean Code: A Handbook of Agile Software Craftsmanship. Prentice Hall. (Фундаментальна праця про те, як писати читабельний, зрозумілий та підтримуваний код).URL: https://surl.lt/ycybrh (Дата звернення: 01.11.2025).
+　　　3.PHP: The Right Way: Агрегатор найкращих практик, посібників та стандартів сучасної PHP-розробки.URL: https://phptherightway.com/(Дата звернення: 01.11.2025).
+　　　4.Офіційна документація PHP.net: Завжди перше місце для пошуку інформації про мовні конструкції та функції.URL: https://www.php.net/manual/en/(Дата звернення: 01.11.2025).
+　　　5.Martin Fowler's Blog (martinfowler.com): Персональний сайт-блог Мартіна Фаулера, де він продовжує публікувати статті про архітектуру ПЗ, рефакторинг та гнучкі методології.URL: https://martinfowler.com/(Дата звернення: 01.11.2025).
+
+
+ДОДАТОК А
+Відеозапис
+Відеозапис доповіді:  https://youtu.be/DDa6zbV94mA
+Хронологічний опис відеозапису:
+00:00 - Вступ
+01:03 - Методи рефакторингу, що розглядаються для мови програмування PHP
+2:00 - Push Down Method
+2:34 - Приклад коду до рефакторингу Push Down Method
+3:14 - Приклад коду після рефакторингу Push Down Method
+3:35 - Self Encapsulate Field
+4:00 - Приклад коду до рефакторингу Self Encapsulate Field
+4:25 - Приклад коду після рефакторингу Self Encapsulate Field
+5:08 - Consolidate Duplicate Conditional Fragments 
+5:36 - Приклад коду до рефакторингу  Consolidate Duplicate Conditional Fragments 
+6:00 - Приклад коду після рефакторингу  Consolidate Duplicate Conditional Fragments 
+6:32 - Висновки
+7:16 - Список використаних джерел
+
+
+
+
+ДОДАТОК Б
+Слайди презентації
+
+Рисунок Б.1 – Титульний слайд
+
+Рисунок Б.2 – Вступ
+
+Рисунок Б.3 – Методи рефакторингу, що розглядаються для мови PHP
+
+Рисунок Б.4 – Push Down Method
+
+Рисунок Б.5 – Код до рефакторингу методом “Push Down Method”
+
+Рисунок Б.6 – Код після рефакторингу методом “Push Down Method”
+
+Рисунок Б.7 – Self Encapsulate Field
+
+Рисунок Б.8 – Код до рефакторингу методом “Self Encapsulate Field”
+
+Рисунок Б.9 – Код після рефакторингу методом “Self Encapsulate Field”
+
+Рисунок Б.10 – Consolidate Duplicate Conditional Fragments
+
+Рисунок Б.11 – Код до рефакторингу методом “Consolidate Duplicate Conditional Fragments”
+
+Рисунок Б.12 – Код після рефакторингу методом “Consolidate Duplicate Conditional Fragments”
+
+Рисунок Б.13 – Висновок
+
+Рисунок Б.14 – Список використаних джерел
+
+
+ДОДАТОК В
+Програмний код
+В.1 Приклад програмного коду до рефакторинґу методом “Push Down Method”
+GitHub репозиторій: https://github.com/NureSaltykovaYuliia/ark-pzpi-23-10-saltykova-yuliia/blob/main/Pract2/ark_pzpi-23-10-saltykova-yuliia-pract2/code-examples-refactoring-methods.php
+ 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47	abstract class User
+{
+    protected string $username;
+
+    public function __construct(string $username)
+    {
+        $this->username = $username;
+    }
+
+    public function login()
+    {
+        echo "Користувач {$this->username} увійшов в систему.\n";
+    }
+    public function banUser(User $otherUser)
+    {
+        if ($this instanceof Admin) {
+            echo "Адмін {$this->username} заблокував користувача {$otherUser->username}.\n";
+        } else {
+
+            throw new \Exception("Тільки адміни можуть блокувати користувачів!");
+        }
+    }
+}
+
+class StandardUser extends User
+{
+    public function postComment()
+    {
+        echo "{$this->username} опублікував коментар.\n";
+    }
+}
+
+class Admin extends User
+{
+    public function manageSystem()
+    {
+        echo "{$this->username} керує системою.\n";
+    }
+}
+?>
+
+В.2 Приклад програмного коду після рефакторинґу методом “Push Down Method”
+GitHub репозиторій: https://github.com/NureSaltykovaYuliia/ark-pzpi-23-10-saltykova-yuliia/blob/main/Pract2/ark_pzpi-23-10-saltykova-yuliia-pract2/code-examples-refactoring-methods.php
+ 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41	abstract class User
+{
+    public string $username;
+
+    public function __construct(string $username)
+    {
+        $this->username = $username;
+    }
+
+    public function login()
+    {
+        echo "Користувач {$this->username} увійшов в систему.\n";
+    }
+}
+
+class StandardUser extends User
+{
+    public function postComment()
+    {
+        echo "{$this->username} опублікував коментар.\n";
+    }
+}
+
+class Admin extends User
+{
+    public function banUser(User $otherUser)
+    {
+        echo "Адмін {$this->username} заблокував користувача {$otherUser->username}.\n";
+    }
+
+    public function manageSystem()
+    {
+        echo "{$this->username} керує системою.\n";
+    }
+}
+
+В.3 Приклад програмного коду до рефакторинґу методом “Self Encapsulate Field”
+GitHub репозиторій: https://github.com/NureSaltykovaYuliia/ark-pzpi-23-10-saltykova-yuliia/blob/main/Pract2/ark_pzpi-23-10-saltykova-yuliia-pract2/code-examples-refactoring-methods.php
+ 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22	class Product
+{
+    private float $price;
+    private string $name;
+
+    public function __construct(string $name, float $price)
+    {
+        $this->name = $name;
+        if ($price < 0) {
+            $this->price = 0;
+        } else {
+            $this->price = $price;
+        }
+    }
+
+    public function getFormattedPrice(): string
+    {
+        return '$' . number_format($this->price, 2);
+    }
+}
+
+В.4 Приклад програмного коду після рефакторинґу методом “Self Encapsulate Field”
+GitHub репозиторій: https://github.com/NureSaltykovaYuliia/ark-pzpi-23-10-saltykova-yuliia/blob/main/Pract2/ark_pzpi-23-10-saltykova-yuliia-pract2/code-examples-refactoring-methods.php
+ 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33	class Product
+{
+    private float $price;
+    private string $name;
+
+    public function __construct(string $name, float $price)
+    {
+        $this->name = $name;
+        $this->setPrice($price);
+    }
+
+    public function getFormattedPrice(): string
+    {
+        return '$' . number_format($this->getPrice(), 2);
+    }
+
+    private function setPrice(float $price): void
+    {
+        if ($price < 0) {
+            $this->price = 0;
+        } else {
+            $this->price = $price;
+        }
+    }
+
+    private function getPrice(): float
+    {
+        return $this->price;
+    }
+}
+
+В.5 Приклад програмного коду до рефакторинґу методом “Consolidate Duplicate Conditional Fragments ”
+GitHub репозиторій: https://github.com/NureSaltykovaYuliia/ark-pzpi-23-10-saltykova-yuliia/blob/main/Pract2/ark_pzpi-23-10-saltykova-yuliia-pract2/code-examples-refactoring-methods.php
+ 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21	class Order
+{
+    private float $totalPrice;
+
+    public function calculateShipping(string $country)
+    {
+        $shippingCost = 0;
+
+        if ($country === 'USA') {
+            $shippingCost = 10.00;
+            $this->totalPrice += $shippingCost;
+            $this->sendNotification("Вартість доставки: $shippingCost");
+        } else {
+            $shippingCost = 25.00;
+            $this->totalPrice += $shippingCost;
+            $this->sendNotification("Вартість доставки: $shippingCost");
+        }
+    }
+
+　　　
+В.6 Приклад програмного коду після рефакторинґу методом “Consolidate Duplicate Conditional Fragments”
+GitHub репозиторій: https://github.com/NureSaltykovaYuliia/ark-pzpi-23-10-saltykova-yuliia/blob/main/Pract2/ark_pzpi-23-10-saltykova-yuliia-pract2/code-examples-refactoring-methods.php
+ 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24	class Order
+{
+    private float $totalPrice;
+
+    public function calculateShipping(string $country)
+    {
+        $shippingCost = 0;
+
+        if ($country === 'USA') {
+            $shippingCost = 10.00;
+        } else {
+            $shippingCost = 25.00;
+        }
+
+        $this->totalPrice += $shippingCost;
+        $this->sendNotification("Вартість доставки: $shippingCost");
+    }
+
+    // ...
+    private function sendNotification(string $message) { /* ... */ }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　　　
+　　　
+　　　
+　　　
