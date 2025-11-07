@@ -11,23 +11,46 @@ namespace Application.Services
 {
     public class AuthService : IAuthService
     {
-        
+
         private readonly IUserRepository _userRepository;
+        private readonly IAdminCodeRepository _adminCodeRepository;
         private readonly IConfiguration _configuration;
 
-        
-        public AuthService(IUserRepository userRepository, IConfiguration configuration)
+
+        public AuthService(IUserRepository userRepository, IAdminCodeRepository adminCodeRepository, IConfiguration configuration)
         {
             _userRepository = userRepository;
+            _adminCodeRepository = adminCodeRepository;
             _configuration = configuration;
         }
 
         public async Task<User> Register(UserForRegistrationDto userForRegistration)
         {
-            
+
             if (await _userRepository.DoesUserExistAsync(userForRegistration.Email))
             {
                 throw new Exception("Користувач з таким email вже існує.");
+            }
+
+            // Перевірка коду адміністратора
+            AdminCode adminCode = null;
+            UserRole userRole = UserRole.DogOwner;
+
+            if (!string.IsNullOrWhiteSpace(userForRegistration.AdminCode))
+            {
+                adminCode = await _adminCodeRepository.GetByCodeAsync(userForRegistration.AdminCode);
+
+                if (adminCode == null)
+                {
+                    throw new Exception("Невірний код адміністратора.");
+                }
+
+                if (adminCode.IsUsed)
+                {
+                    throw new Exception("Код адміністратора вже використаний.");
+                }
+
+                userRole = UserRole.Admin;
             }
 
             string passwordHash = BCrypt.Net.BCrypt.HashPassword(userForRegistration.Password);
@@ -37,12 +60,20 @@ namespace Application.Services
                 Username = userForRegistration.Username,
                 Email = userForRegistration.Email,
                 PasswordHash = passwordHash,
-                Role = UserRole.DogOwner, 
+                Role = userRole,
                 Bio = ""
             };
 
-         
-            return await _userRepository.AddUserAsync(user);
+
+            var createdUser = await _userRepository.AddUserAsync(user);
+
+            // Позначити код як використаний
+            if (adminCode != null)
+            {
+                await _adminCodeRepository.MarkAsUsedAsync(adminCode.Id, createdUser.Id);
+            }
+
+            return createdUser;
         }
 
         public async Task<string> Login(UserForLoginDto userForLogin)

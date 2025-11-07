@@ -28,8 +28,9 @@ public class Program
         builder.Services.AddScoped<IEventRepository, EventRepository>();
         builder.Services.AddScoped<IPartnerRepository, PartnerRepository>();
         builder.Services.AddScoped<ISmartDeviceRepository, SmartDeviceRepository>();
-        builder.Services.AddScoped<IConversationRepository, ConversationRepository>(); 
+        builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
         builder.Services.AddScoped<IMessageRepository, MessageRepository>();
+        builder.Services.AddScoped<IAdminCodeRepository, AdminCodeRepository>();
         builder.Services.AddSignalR();
 
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

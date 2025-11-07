@@ -21,6 +21,7 @@ namespace Infrastructure
         public DbSet<SmartDevice> SmartDevices { get; set; }
         public DbSet<Conversation> Conversations { get; set; }
         public DbSet<Message> Messages { get; set; }
+        public DbSet<AdminCode> AdminCodes { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -51,6 +52,12 @@ namespace Infrastructure
                 .HasOne(d => d.SmartDevice)
                 .WithOne(sd => sd.Dog)
                 .HasForeignKey<SmartDevice>(sd => sd.DogId);
+
+            modelBuilder.Entity<AdminCode>()
+                .HasOne(ac => ac.UsedBy)
+                .WithMany()
+                .HasForeignKey(ac => ac.UsedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

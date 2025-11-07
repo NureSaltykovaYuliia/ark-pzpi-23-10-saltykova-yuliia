@@ -13,6 +13,9 @@ namespace Application.DTOs
 
         [Required(ErrorMessage = "Пароль обов'язковий")]
         public string Password { get; set; }
+
+        // Опціональний код для реєстрації як адміністратор
+        public string? AdminCode { get; set; }
     }
 }
 
