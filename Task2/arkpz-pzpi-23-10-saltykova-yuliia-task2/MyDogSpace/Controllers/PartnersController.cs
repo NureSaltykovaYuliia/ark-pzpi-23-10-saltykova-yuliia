@@ -1,6 +1,5 @@
 using Application.Abstractions.Interfaces;
 using Application.DTOs;
-using Entities.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,49 +9,26 @@ namespace MyDogSpace.Controllers
     [Route("api/[controller]")]
     public class PartnersController : ControllerBase
     {
-        private readonly IPartnerRepository _partnerRepository;
+        private readonly IPartnerService _partnerService;
 
-        public PartnersController(IPartnerRepository partnerRepository)
+        public PartnersController(IPartnerService partnerService)
         {
-            _partnerRepository = partnerRepository;
+            _partnerService = partnerService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllPartners()
         {
-            var partners = await _partnerRepository.GetAllAsync();
-            var partnerDtos = partners.Select(p => new PartnerDto
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Description = p.Description,
-                Address = p.Address,
-                PhoneNumber = p.PhoneNumber,
-                Website = p.Website,
-                Latitude = p.Latitude,
-                Longitude = p.Longitude
-            });
-            return Ok(partnerDtos);
+            var partners = await _partnerService.GetAllPartnersAsync();
+            return Ok(partners);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetPartnerById(int id)
         {
-            var partner = await _partnerRepository.GetByIdAsync(id);
+            var partner = await _partnerService.GetPartnerByIdAsync(id);
             if (partner == null) return NotFound();
-
-            var partnerDto = new PartnerDto
-            {
-                Id = partner.Id,
-                Name = partner.Name,
-                Description = partner.Description,
-                Address = partner.Address,
-                PhoneNumber = partner.PhoneNumber,
-                Website = partner.Website,
-                Latitude = partner.Latitude,
-                Longitude = partner.Longitude
-            };
-            return Ok(partnerDto);
+            return Ok(partner);
         }
 
         [Authorize(Roles = "Admin")]
@@ -62,19 +38,15 @@ namespace MyDogSpace.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var partner = new Partner
+            try
             {
-                Name = partnerDto.Name,
-                Description = partnerDto.Description,
-                Address = partnerDto.Address,
-                PhoneNumber = partnerDto.PhoneNumber,
-                Website = partnerDto.Website,
-                Latitude = partnerDto.Latitude,
-                Longitude = partnerDto.Longitude
-            };
-
-            var createdPartner = await _partnerRepository.AddAsync(partner);
-            return CreatedAtAction(nameof(GetPartnerById), new { id = createdPartner.Id }, createdPartner);
+                var createdPartner = await _partnerService.CreatePartnerAsync(partnerDto);
+                return CreatedAtAction(nameof(GetPartnerById), new { id = createdPartner.Id }, createdPartner);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [Authorize(Roles = "Admin")]
@@ -84,30 +56,30 @@ namespace MyDogSpace.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var partner = await _partnerRepository.GetByIdAsync(id);
-            if (partner == null) return NotFound();
-
-            partner.Name = partnerDto.Name;
-            partner.Description = partnerDto.Description;
-            partner.Address = partnerDto.Address;
-            partner.PhoneNumber = partnerDto.PhoneNumber;
-            partner.Website = partnerDto.Website;
-            partner.Latitude = partnerDto.Latitude;
-            partner.Longitude = partnerDto.Longitude;
-
-            await _partnerRepository.UpdateAsync(partner);
-            return NoContent();
+            try
+            {
+                await _partnerService.UpdatePartnerAsync(id, partnerDto);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePartner(int id)
         {
-            var partner = await _partnerRepository.GetByIdAsync(id);
-            if (partner == null) return NotFound();
-
-            await _partnerRepository.DeleteAsync(id);
-            return NoContent();
+            try
+            {
+                await _partnerService.DeletePartnerAsync(id);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

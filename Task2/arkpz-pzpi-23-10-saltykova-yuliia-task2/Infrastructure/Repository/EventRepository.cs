@@ -50,6 +50,10 @@ namespace Infrastructure.Repositories
         {
             _context.Events.Add(eventEntity);
             await _context.SaveChangesAsync();
+
+            // Load the Organizer navigation property
+            await _context.Entry(eventEntity).Reference(e => e.Organizer).LoadAsync();
+
             return eventEntity;
         }
 

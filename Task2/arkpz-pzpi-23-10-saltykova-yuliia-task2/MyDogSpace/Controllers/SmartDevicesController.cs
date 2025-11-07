@@ -1,6 +1,5 @@
 using Application.Abstractions.Interfaces;
 using Application.DTOs;
-using Entities.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -12,13 +11,11 @@ namespace MyDogSpace.Controllers
     [Authorize]
     public class SmartDevicesController : ControllerBase
     {
-        private readonly ISmartDeviceRepository _deviceRepository;
-        private readonly IDogRepository _dogRepository;
+        private readonly ISmartDeviceService _deviceService;
 
-        public SmartDevicesController(ISmartDeviceRepository deviceRepository, IDogRepository dogRepository)
+        public SmartDevicesController(ISmartDeviceService deviceService)
         {
-            _deviceRepository = deviceRepository;
-            _dogRepository = dogRepository;
+            _deviceService = deviceService;
         }
 
         private int GetCurrentUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
@@ -26,63 +23,46 @@ namespace MyDogSpace.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllDevices()
         {
-            var devices = await _deviceRepository.GetAllAsync();
-            var deviceDtos = devices.Select(d => new SmartDeviceDto
-            {
-                Id = d.Id,
-                DeviceGuid = d.DeviceGuid,
-                LastLatitude = d.LastLatitude,
-                LastLongitude = d.LastLongitude,
-                BatteryLevel = d.BatteryLevel,
-                DogId = d.DogId,
-                DogName = d.Dog?.Name
-            });
-            return Ok(deviceDtos);
+            var devices = await _deviceService.GetAllDevicesAsync();
+            return Ok(devices);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetDeviceById(int id)
         {
-            var device = await _deviceRepository.GetByIdAsync(id);
-            if (device == null) return NotFound();
-
-            var dog = await _dogRepository.GetByIdAsync(device.DogId);
-            if (dog != null && dog.OwnerId != GetCurrentUserId()) return Forbid();
-
-            var deviceDto = new SmartDeviceDto
+            try
             {
-                Id = device.Id,
-                DeviceGuid = device.DeviceGuid,
-                LastLatitude = device.LastLatitude,
-                LastLongitude = device.LastLongitude,
-                BatteryLevel = device.BatteryLevel,
-                DogId = device.DogId,
-                DogName = device.Dog?.Name
-            };
-            return Ok(deviceDto);
+                var device = await _deviceService.GetDeviceByIdAsync(id, GetCurrentUserId());
+                if (device == null) return NotFound();
+                return Ok(device);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpGet("dog/{dogId}")]
         public async Task<IActionResult> GetDeviceByDogId(int dogId)
         {
-            var dog = await _dogRepository.GetByIdAsync(dogId);
-            if (dog == null) return NotFound("Собака не знайдена");
-            if (dog.OwnerId != GetCurrentUserId()) return Forbid();
-
-            var device = await _deviceRepository.GetByDogIdAsync(dogId);
-            if (device == null) return NotFound("Пристрій не знайдено");
-
-            var deviceDto = new SmartDeviceDto
+            try
             {
-                Id = device.Id,
-                DeviceGuid = device.DeviceGuid,
-                LastLatitude = device.LastLatitude,
-                LastLongitude = device.LastLongitude,
-                BatteryLevel = device.BatteryLevel,
-                DogId = device.DogId,
-                DogName = device.Dog?.Name
-            };
-            return Ok(deviceDto);
+                var device = await _deviceService.GetDeviceByDogIdAsync(dogId, GetCurrentUserId());
+                if (device == null) return NotFound("Пристрій не знайдено");
+                return Ok(device);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPost]
@@ -91,35 +71,19 @@ namespace MyDogSpace.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var dog = await _dogRepository.GetByIdAsync(deviceDto.DogId);
-            if (dog == null) return NotFound("Собака не знайдена");
-            if (dog.OwnerId != GetCurrentUserId()) return Forbid();
-
-            var existingDevice = await _deviceRepository.GetByDogIdAsync(deviceDto.DogId);
-            if (existingDevice != null)
-                return BadRequest("До цієї собаки вже прикріплений пристрій");
-
-            var device = new SmartDevice
+            try
             {
-                DeviceGuid = deviceDto.DeviceGuid,
-                DogId = deviceDto.DogId,
-                LastLatitude = 0,
-                LastLongitude = 0,
-                BatteryLevel = 100
-            };
-
-            var createdDevice = await _deviceRepository.AddAsync(device);
-            var resultDto = new SmartDeviceDto
+                var createdDevice = await _deviceService.CreateDeviceAsync(deviceDto, GetCurrentUserId());
+                return CreatedAtAction(nameof(GetDeviceById), new { id = createdDevice.Id }, createdDevice);
+            }
+            catch (UnauthorizedAccessException)
             {
-                Id = createdDevice.Id,
-                DeviceGuid = createdDevice.DeviceGuid,
-                LastLatitude = createdDevice.LastLatitude,
-                LastLongitude = createdDevice.LastLongitude,
-                BatteryLevel = createdDevice.BatteryLevel,
-                DogId = createdDevice.DogId,
-                DogName = dog?.Name
-            };
-            return CreatedAtAction(nameof(GetDeviceById), new { id = createdDevice.Id }, resultDto);
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
@@ -128,31 +92,37 @@ namespace MyDogSpace.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var device = await _deviceRepository.GetByIdAsync(id);
-            if (device == null) return NotFound();
-
-            var dog = await _dogRepository.GetByIdAsync(device.DogId);
-            if (dog != null && dog.OwnerId != GetCurrentUserId()) return Forbid();
-
-            device.LastLatitude = deviceDto.LastLatitude;
-            device.LastLongitude = deviceDto.LastLongitude;
-            device.BatteryLevel = deviceDto.BatteryLevel;
-
-            await _deviceRepository.UpdateAsync(device);
-            return NoContent();
+            try
+            {
+                await _deviceService.UpdateDeviceAsync(id, deviceDto, GetCurrentUserId());
+                return NoContent();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteDevice(int id)
         {
-            var device = await _deviceRepository.GetByIdAsync(id);
-            if (device == null) return NotFound();
-
-            var dog = await _dogRepository.GetByIdAsync(device.DogId);
-            if (dog != null && dog.OwnerId != GetCurrentUserId()) return Forbid();
-
-            await _deviceRepository.DeleteAsync(id);
-            return NoContent();
+            try
+            {
+                await _deviceService.DeleteDeviceAsync(id, GetCurrentUserId());
+                return NoContent();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

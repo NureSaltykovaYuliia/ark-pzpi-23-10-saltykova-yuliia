@@ -22,7 +22,16 @@ public class Program
         builder.Services.AddDbContext<MyDbContext>(options =>
             options.UseSqlite(connectionString));
 
+        // Register Services
         builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddScoped<IDogService, DogService>();
+        builder.Services.AddScoped<IEventService, EventService>();
+        builder.Services.AddScoped<ISmartDeviceService, SmartDeviceService>();
+        builder.Services.AddScoped<IPartnerService, PartnerService>();
+        builder.Services.AddScoped<IConversationService, ConversationService>();
+        builder.Services.AddScoped<IAdminCodeService, AdminCodeService>();
+
+        // Register Repositories
         builder.Services.AddScoped<IUserRepository, UserRepository>();
         builder.Services.AddScoped<IDogRepository, DogRepository>();
         builder.Services.AddScoped<IEventRepository, EventRepository>();
@@ -31,6 +40,7 @@ public class Program
         builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
         builder.Services.AddScoped<IMessageRepository, MessageRepository>();
         builder.Services.AddScoped<IAdminCodeRepository, AdminCodeRepository>();
+
         builder.Services.AddSignalR();
 
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

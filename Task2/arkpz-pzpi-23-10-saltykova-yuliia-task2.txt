@@ -1,0 +1,941 @@
+МІНІСТЕРСТВО ОСВІТИ І НАУКИ УКРАЇНИ
+ХАРКІВСЬКИЙ НАЦІОНАЛЬНИЙ УНІВЕРСИТЕТ РАДІОЕЛЕКТРОНІКИ
+
+
+Кафедра «Програмної інженерії»
+
+
+
+ЗВІТ
+з лабораторної роботи 2
+з дисципліни «Аналіз та рефакторінг коду» 
+на тему «Розробка бази даних для серверної частини системи та прикладного програмного інтерфейсу (API).»
+
+
+Виконала:
+ст. гр. ПЗПІ-23-10
+Салтикова Ю.М.
+
+Перевірив:
+                                                                        Викладач
+                                                                                  Дашенков Д.С.
+
+
+
+
+Харків 2025
+1 БУДОВА ПРОГРАМНОЇ СИСТЕМИ
+　　　1.1Архітектурні рішення для серверної частини системи
+　　　　Серверна частина системи реалізована з використанням технології ASP.NET Core, що дозволяє створювати високопродуктивні вебзастосунки та забезпечує стабільну роботу сервісу навіть при значному навантаженні. У якості мови програмування використовується C#, що забезпечує ефективну реалізацію бізнес-логіки та модулів обробки даних. Для роботи з базою даних застосовується Entity Framework, який реалізує об’єктно-реляційне відображення, що значно спрощує взаємодію між програмним кодом і даними. Для автентифікації користувачів і захисту їхніх даних використовується JWT (JSON Web Token), який гарантує безпечний обмін інформацією між клієнтом і сервером. Також сервер підтримує технологію SignalR, яка дає змогу організувати обмін повідомленнями в реальному часі, наприклад у чатах між користувачами або при оновленні геолокаційних даних пристроїв.
+　　　База даних системи побудована на основі SQLite. Вона використовується для зберігання профілів користувачів, інформації про їхніх собак, події, партнерів, історію повідомлень та інші пов’язані дані. SQLite обрано завдяки її легкості, зручності інтеграції та достатній продуктивності для середніх навантажень.   Клієнтська частина розробляється за допомогою React, HTML, CSS, JavaScript і фреймворку Bootstrap, що забезпечує створення зручного, адаптивного та сучасного інтерфейсу користувача. Через вебінтерфейс або мобільний застосунок користувачі можуть створювати профілі, додавати інформацію про своїх собак, шукати інших власників поблизу за допомогою геолокації, спілкуватися у чаті, переглядати події або користуватися каталогом партнерських сервісів. 
+　　　　Для хостингу та масштабування системи використовується Google Cloud Platform (GCP), що гарантує стабільну роботу серверної частини, захищене зберігання даних і можливість швидкого розширення ресурсів при зростанні кількості користувачів. Для тестування взаємодії з IoT-пристроями, такими як розумні нашийники чи GPS-трекери, використовується Wokwi IoT Simulator, який дозволяє моделювати процес передачі даних між пристроєм і хмарним сервером.
+　　1.2 Моделі, що використовуються в системі
+　　　Модель User (Користувач)
+Це центральна сутність системи, яка представляє зареєстрованого користувача — власника собак або адміністратора. Модель зберігає інформацію про ім’я користувача, електронну пошту, пароль, коротку біографію, роль (власник або адміністратор), а також геолокаційні дані, необхідні для пошуку інших користувачів поблизу.
+Користувач може володіти кількома собаками, брати участь у подіях, спілкуватися в чатах, надсилати повідомлення й створювати події. Таким чином, користувач виступає основним об’єктом взаємодії між усіма іншими моделями в системі. Адміністратор може додавати партнерів, та займатися модерацією користувачів.
+　　　
+　　　Модель Dog (Собака)
+Модель відображає інформацію про домашнього улюбленця користувача. Для кожної собаки зберігаються її ім’я, порода, опис, дата народження та фото. 
+　　　Кожна собака має власника, який пов’язаний із моделлю користувача через зв’язок “один-до-багатьох”: один користувач може мати декілька собак, але кожна собака належить лише одному власнику.
+Крім того, у собаки є зв’язок “один-до-одного” з моделлю SmartDevice, що відображає прив’язку розумного пристрою до конкретного улюбленця для відстеження його місцезнаходження.
+　　　
+　　　Модель SmartDevice (Розумний пристрій)
+Ця модель представляє IoT-пристрій, наприклад GPS-трекер або smart-ошийник, який використовується для моніторингу місцезнаходження та активності собаки. У моделі зберігаються дані про унікальний ідентифікатор пристрою, останні координати (широта, довгота) і рівень заряду батареї.
+Між SmartDevice та Dog встановлено зв’язок “один-до-одного”, що означає: кожна собака може мати лише один прив’язаний пристрій, а кожен пристрій належить лише одній собаці.
+　　　
+　　　Модель Event (Подія)
+Модель використовується для зберігання інформації про заходи, зустрічі або прогулянки, які організовуються користувачами. Кожна подія має назву, опис, час початку й завершення, тип, координати місця проведення, а також посилання на організатора.
+Зв’язки в цій моделі мають два типи:
+　　　“один-до-багатьох” — кожна подія має одного організатора, але користувач може створити багато подій;
+　　　“багато-до-багатьох” — подія може мати багато учасників, а користувач може брати участь у багатьох подіях.
+Це дозволяє формувати спільні зустрічі власників собак і відображати активність користувачів у спільноті.
+　　　
+　　　Модель Conversation (Розмова)
+Ця модель відображає окремий чат або групу користувачів, які спілкуються між собою. Розмова може мати власну назву, а головним її змістом є список учасників і повідомлень.
+Між Conversation і User існує зв’язок “багато-до-багатьох”, адже один користувач може брати участь у кількох розмовах, а одна розмова може включати багатьох користувачів.
+Також існує зв’язок “один-до-багатьох” із моделлю Message, оскільки кожна розмова містить багато повідомлень, але кожне повідомлення належить лише одній розмові.
+　　　Модель Message (Повідомлення)
+Модель зберігає інформацію про конкретне повідомлення, відправлене користувачем. Вона містить текст повідомлення, дату й час відправлення, а також посилання на користувача, який його надіслав, і на розмову, до якої воно належить.
+Зв’язки мають вигляд:
+　　　“один-до-багатьох” між User і Message — користувач може надіслати багато повідомлень, але кожне повідомлення має лише одного відправника;
+　　　“один-до-багатьох” між Conversation і Message — кожне повідомлення належить до конкретної розмови.
+　　　Модель Partner (Партнер)
+Ця модель описує партнерські організації, які надають послуги у сфері догляду за тваринами, такі як ветеринарні клініки, грумінг-салони чи магазини. Для кожного партнера зберігаються назва, опис, адреса, контактна інформація, вебсайт і координати розташування.
+Модель не має складних зв’язків з іншими сутностями, але використовується для відображення в каталозі сервісів.
+　　　
+
+
+　　　2 UML ДІАГРАМА ПРЕЦЕДЕНТІВ ДЛЯ СЕРВЕРНОЇ ЧАСТИНИ СИСТЕМИ
+　　　2.1 UML діаграма
+
+
+Рисунок 2.1 - UML діаграма прецедентів
+　　　2.2  Опис діаграми
+　　　На діаграмі прецедентів зображено взаємодію трьох основних учасників системи: адміністратора (Admin), власника собаки (DogOwner) і смартпристрою (SmartDevice).
+　　　Адміністратор відповідає за управління та підтримку системи. Він має можливість виконувати резервне копіювання бази даних, керувати користувачами, проводячи модерацію їхніх дій, а також керувати партнерами. Ці функції спрямовані на забезпечення стабільної роботи системи, збереження даних і контроль за контентом, який створюють користувачі.
+　　　Власник собаки є основним користувачем системи, який взаємодіє з більшістю функцій. Він проходить автентифікацію за допомогою JWT і може реєструватися в системі, при цьому прецедент “Зміна пароля” розширює можливості прецеденту “Зареєструватися”. Після входу користувач має змогу керувати власним профілем, додавати, редагувати та видаляти інформацію про собак (CRUD-операції), а також брати участь у подіях, створювати їх або приєднуватися до вже існуючих (CRUD, Join). Крім цього, користувач може спілкуватися з іншими власниками собак через систему повідомлень, реалізовану за допомогою SignalR, керувати списком друзів, залишати відгуки партнерам і прив’язувати свій смартпристрій до облікового запису.
+　　　Окремим аспектом діяльності користувача є взаємодія з пристроями. Він може переглядати дані, отримані з пристрою, а також отримувати сповіщення про місцезнаходження собаки в разі виходу за дозволений радіус. 
+　　　Смартпристрій є автономним учасником системи, який передає дані телеметрії, зокрема рівень активності та інформацію про місцезнаходження собаки. Також пристрій надсилає сповіщення у випадках, коли фіксуються зміни у позиції тварини.
+　　　Загалом діаграма демонструє комплексну модель взаємодії користувача, адміністратора й смартпристрою. Вона ілюструє, як система забезпечує авторизацію, обмін даними, управління контентом і моніторинг стану тварин, об’єднуючи програмні та апаратні компоненти в єдину екосистему.
+
+
+　　　3 ER ДІАГРАМА 
+　　　3.1 ER діаграма бази даних
+　　　
+　　　
+Рисунок 3.1 - ER діаграма 
+　　　ER-діаграма відображає вісім основних сутностей: Користувачі, Собака, Події, Повідомлення, Розмова, АдмінКод, Партнери та Розумний Пристрій. Центральною сутністю є Користувачі, які взаємодіють з іншими об’єктами системи. Користувач може мати кілька собак, створювати або брати участь у подіях, вести розмови з іншими користувачами та надсилати повідомлення. Для доступу до адміністративних функцій користувач входить у систему за допомогою спеціального коду, який зберігається в таблиці АдмінКод.
+　　　Кожен користувач може володіти одним або кількома розумними пристроями, що мають власний номер, координати розташування та рівень заряду. У системі також присутні партнери - організації або підприємства, які мають контактні дані, адресу, координати які не пов’язані з іншими таблицями, бо це буде лише сторінка з інформацією.  Розмови містять багато повідомлень, кожне з яких належить певному користувачу, який його створив.
+
+
+4 БАЗА ДАНИХ ПРОГРАМНОЇ СИСТЕМИ
+　　　4.1 Таблиці бази даних
+　　　База даних складається з кількох основних таблиць, які відображають структуру системи користувачів, їхніх тварин, пристроїв, подій і спілкування.
+　　　Таблиця Users зберігає інформацію про користувачів системи, включаючи їх ім’я, електронну адресу, пароль, біографію, роль та останні координати місцеперебування.
+　　　Dogs містить дані про собак, які належать користувачам: породу, дату народження, опис, ім’я та посилання на фото. Кожна собака пов’язана з певним користувачем через поле OwnerId.
+　　　SmartDevices відповідає за зберігання інформації про розумні пристрої, що належать собакам. У ній містяться унікальний ідентифікатор пристрою, координати його останнього місця та рівень заряду батареї.
+　　　Conversations - таблиця, що представляє чати між користувачами. З нею пов’язана таблиця Messages, у якій зберігаються повідомлення з текстом, часом відправлення, відправником і розмовою, до якої вони належать.
+　　　Таблиця ConversationUser реалізує зв’язок між користувачами та розмовами, визначаючи, хто є учасником певного чату.
+　　　Events зберігає інформацію про події: назву, опис, час початку та завершення, тип, координати місця проведення і користувача-організатора. Таблиця EventUser реалізує зв’язок між подіями та користувачами, які беруть у них участь.
+　　　AdminCodes містить спеціальні коди, за допомогою яких користувачі можуть отримати адміністративний доступ. Вона також зберігає інформацію про час створення коду, використання та користувача, який його активував.
+　　　Таблиця Partners описує партнерів системи - організації або компанії, із зазначенням їх назви, опису, адреси, телефону, вебсайту та географічних координат.
+　　　Нарешті, таблиця UserUser реалізує зв’язки дружби між користувачами, визначаючи, хто є другом кого.
+　　　Таким чином, база даних побудована навколо користувача, який взаємодіє з іншими користувачами, своїми собаками, подіями, пристроями та партнерами через різні типи зв’язків і взаємодій(Див. додаток А.1).
+
+
+5  ДІАГРАМА СТРУКТУРИ БД
+　　　5.1 Діаграма бази даних
+
+
+Рисунок 5.1 -  Схема бази даних
+　　　База даних складається з кількох основних сутностей, які описують користувачів, їхніх собак, події, розмови, повідомлення, партнерів, розумні пристрої та адміністративні коди. Центральною таблицею є Users, яка пов’язує більшість інших таблиць через зовнішні ключі(Див. додаток А.1).
+　　　Кожен користувач зберігається в таблиці Users, де фіксується його ім’я, електронна пошта, хеш пароля, коротка біографія, роль у системі та останні координати. З користувачем можуть бути пов’язані кілька сутностей: собаки, події, повідомлення, розмови, а також адміністративні коди, які визначають рівень доступу(Див. додаток А.1).
+　　　Таблиця Dogs зберігає інформацію про собак користувача: породу, дату народження, опис, ім’я та фото. Кожен запис має зовнішній ключ OwnerId, який посилається на користувача - власника собаки(Див. додаток А.1).
+　　　Кожна собака може бути пов’язана з одним розумним пристроєм, що відображено у таблиці SmartDevices. Ця таблиця містить унікальний ідентифікатор пристрою (DeviceGuid), координати місцезнаходження, рівень заряду та зовнішній ключ DogId, що посилається на конкретну собаку. Обмеження у вигляді унікального індексу гарантує, що кожен пристрій може належати лише одній собаці(Див. додаток А.1).
+　　　Для відображення соціальної взаємодії між користувачами створено кілька допоміжних таблиць. Conversations містить список розмов, у яких користувачі можуть спілкуватися. Зв’язок між користувачами та розмовами реалізовано через таблицю ConversationUser, яка відображає відношення “багато до багатьох»” між таблицями Users і Conversations. Кожна розмова містить повідомлення, які зберігаються у таблиці Messages, де вказано текст повідомлення, час відправлення, відправника (SenderId) і розмову, до якої воно належить (ConversationId)(Див. додаток А.1).
+　　　Таблиця Events зберігає дані про події: назву, опис, час початку і завершення, тип, координати та організатора події (OrganizerId). Користувачі можуть брати участь у багатьох подіях, що реалізується через таблицю-зв’язок EventUser, яка також встановлює відношення “багато до багатьох” між Users і Events(Див. додаток А.1).
+　　　Для реалізації дружніх зв’язків між користувачами існує таблиця UserUser, де фіксуються пари друзів — обидва поля (FriendsId і UserId) посилаються на таблицю Users, що дозволяє будувати двосторонні відносини між користувачами(Див. додаток А.1).
+　　　Таблиця AdminCodes використовується для контролю доступу адміністратора. Вона містить унікальний код, позначку, чи він уже використаний, час створення та використання, а також поле UsedByUserId, яке посилається на користувача, що застосував цей код(Див. додаток А.1).
+　　　Таблиця Partners зберігає інформацію про партнерів системи -організації або компанії, що мають назву, опис, адресу, контактні дані, вебсайт і координати. Вона не має прямих зовнішніх ключів, але може використовуватися для логічних зв’язків через географічне розташування(Див. додаток А.1).
+
+
+　　　6  РОЗРОБИТИ ФУНКЦІЇ РОБОТИ З БД
+　　　6.1 Методи доступу до БД
+　　　У цьому програмному рішенні реалізовано повноцінний шар доступу до бази даних за допомогою ORM-підходу (Object-Relational Mapping) на основі Entity Framework. Для кожної сутності системи створено окремий репозиторій, який інкапсулює логіку роботи з таблицями бази даних і забезпечує виконання CRUD-операцій (Create, Read, Update, Delete). Усі репозиторії використовують контекст даних MyDbContext, що містить відповідні колекції DbSet для кожного типу сутності(Див. додаток А.2).
+　　　Клас UserRepository відповідає за роботу з користувачами, надаючи можливість перевірки існування облікового запису, пошуку користувача за електронною поштою та додавання нових користувачів(Див. додаток А.2).
+　　　DogRepository реалізує зберігання, оновлення та видалення інформації про собак, підтримуючи фільтрацію за власником. Для розумних пристроїв створено SmartDeviceRepository, який дозволяє знаходити пристрої за ідентифікатором, пов’язаною собакою або GUID-кодом, а також додавати й оновлювати дані про них(Див. додаток А.2).
+　　　Репозиторій EventRepository оперує подіями: дозволяє отримувати список усіх подій, фільтрувати їх за організатором, знаходити майбутні заходи, створювати, редагувати та видаляти записи. Клас PartnerRepository забезпечує доступ до інформації про партнерів системи, надаючи стандартні CRUD-методи для керування їхніми даними(Див. додаток А.2).
+　　　Для реалізації функцій спілкування передбачено ConversationRepository і MessageRepository. Перший дозволяє створювати нові розмови, шукати приватні чати між двома користувачами та отримувати всі розмови певного користувача. Другий — керує повідомленнями, додає нові записи, завантажує останні повідомлення для конкретної розмови та підтягує дані про відправника(Див. додаток А.2).
+　　　Усі методи виконуються асинхронно, що підвищує продуктивність і забезпечує стабільну роботу додатка при великій кількості запитів. Така архітектура із застосуванням патерну Repository спрощує підтримку коду, забезпечує розмежування логіки доступу до даних та бізнес-логіки, а також створює гнучку та масштабовану систему для ефективної взаємодії з базою даних.
+
+
+　　　7  РОЗРОБКА API ДЛЯ СЕРВЕРНОЇ ЧАСТИНИ
+　　　7.1 Тип API, що  буде використовуватися
+　　　Для взаємодії між клієнтською частиною та сервером використовується REST API. Дані передаються у форматі JSON через стандартні HTTP-методи (GET, POST, PUT, DELETE).
+Авторизація користувачів здійснюється за допомогою JWT-токенів.
+　　　Опис основних контролерів і ендпоінтів:
+　　　AuthController
+　　　Відповідає за реєстрацію та авторизацію користувачів.
+　　　POST /api/auth/register — реєстрація нового користувача (приймає UserForRegistrationDto).
+　　　POST /api/auth/login — вхід користувача, повертає JWT-токен.
+
+　　　DogsController
+　　　Реалізує CRUD-операції для об’єктів “собаки”.
+　　　
+　　　GET /api/dogs/my — отримати собак поточного користувача.
+　　　
+　　　GET /api/dogs/{id} — отримати конкретну собаку.
+　　　
+　　　POST /api/dogs — створити нову собаку (через CreateUpdateDogDto).
+　　　
+　　　PUT /api/dogs/{id} — оновити інформацію про собаку.
+　　　
+　　　DELETE /api/dogs/{id} — видалити собаку.
+　　　
+　　　
+　　　
+　　　EventsController
+　　　Керує подіями (зустрічами, виставками тощо).
+　　　
+　　　GET /api/events — отримати всі події.
+　　　
+　　　GET /api/events/upcoming — отримати майбутні події.
+　　　
+　　　GET /api/events/my — отримати події, створені поточним користувачем.
+　　　
+　　　GET /api/events/{id} — отримати подію за ідентифікатором.
+　　　
+　　　POST /api/events — створити подію.
+　　　
+　　　PUT /api/events/{id} — оновити подію.
+　　　
+　　　DELETE /api/events/{id} — видалити подію.
+　　　
+　　　
+　　　PartnersController
+　　　Реалізує роботу з партнерами (ветклініки, магазини тощо).
+　　　
+　　　GET /api/partners — отримати список партнерів.
+　　　
+　　　GET /api/partners/{id} — отримати деталі партнера.
+　　　
+　　　POST /api/partners — створити нового партнера (тільки для адміністратора).
+　　　
+　　　PUT /api/partners/{id} — оновити інформацію про партнера (тільки для адміністратора).
+　　　
+　　　DELETE /api/partners/{id} — видалити партнера (тільки для адміністратора).
+　　　
+　　　
+　　　
+　　　ConversationsController
+　　　Реалізує систему приватних чатів між користувачами.
+　　　
+　　　GET /api/conversations — отримати всі розмови поточного користувача.
+　　　
+　　　GET /api/conversations/{id}/messages — отримати історію повідомлень певної розмови.
+　　　
+　　　SmartDevicesController
+　　　Відповідає за взаємодію із “розумними пристроями” (GPS-трекерами собак).
+　　　
+　　　GET /api/smartdevices — отримати всі пристрої.
+　　　
+　　　GET /api/smartdevices/{id} — отримати пристрій за ID.
+　　　
+　　　GET /api/smartdevices/dog/{dogId} — отримати пристрій, прив’язаний до конкретної собаки.
+　　　
+　　　POST /api/smartdevices — додати новий пристрій (через CreateSmartDeviceDto).
+　　　
+　　　PUT /api/smartdevices/{id} — оновити координати пристрою.
+　　　
+　　　DELETE /api/smartdevices/{id} — видалити пристрій.
+　　　
+　　　Для передачі даних між клієнтом і сервером використовуються DTO-класи, що визначають структуру запитів і відповідей.
+Це дозволяє уникнути передачі зайвої інформації та забезпечити безпеку даних.
+
+
+8 СПЕЦИФІКАЦІЯ РОЗРОБЛЕНОГО API
+　　　8.1 Специфікація API системи MyDogSpace
+Собаки — DogsController
+GET /api/dogs/my
+Опис: Отримання списку собак поточного користувача.
+Відповідь:
+[
+  {
+    "id": 1,
+    "name": "Барні",
+    "breed": "Лабрадор",
+    "description": "Дружній та активний",
+    "dateOfBirth": "2021-05-12T00:00:00",
+    "photoUrl": "https://example.com/dogs/barni.jpg"
+  }]
+
+POST /api/dogs
+Опис: Додавання нової собаки.
+Тіло запиту:
+{
+  "name": "Белла",
+  "breed": "Бігль",
+  "dateOfBirth": "2023-04-10",
+  "description": "Мила і грайлива"}
+Відповідь (201 Created):
+{
+  "id": 5,
+  "name": "Белла",
+  "breed": "Бігль",
+  "ownerId": 3}
+
+
+
+PUT /api/dogs/{id}
+Опис: Оновлення інформації про собаку.
+Тіло запиту:
+{
+  "name": "Белла",
+  "breed": "Бігль",
+  "description": "Тепер спокійніша",
+  "dateOfBirth": "2023-04-10"}
+Відповідь (204 No Content)
+
+DELETE /api/dogs/{id}
+Опис: Видалення собаки користувача.
+Відповідь (204 No Content)
+
+
+9 ПЕРЕВІРКА РОБОТИ СТВОРЕННОГО КОДУ
+　　　9.1 Тестування розроблених функцій
+　　　
+　　　Рисунок 9.1 - Реєстрація користувача
+　　　
+　　　Рисунок 9.2 -  Відповідь сервера
+　　　
+　　　
+　　　
+　　　Рисунок 9.3 - Юзера збережено в БД
+　　　
+　　　Рисунок 9.4 - Робимо запит на всіх собак юзера
+　　　
+　　　
+　　　Рисунок 9.5 - Створюємо собаку
+　　　
+　　　
+　　　
+　　　Рисунок 9.6 - Знаходимо собаку
+　　　
+　　　
+　　　Рисунок 9.7 -  Змінюємо інформацію про собаку
+　　　
+　　　
+　　　Рисунок 9.8 - Видаляємо собаку
+　　　
+　　　
+　　　
+　　　
+　　　
+　　　
+　　　
+　　　
+ДОДАТОК А
+　　　А.1 Код таблиць бази даних:
+　　　Таблиця Users:
+　　　create table Users
+　　　(
+　　　    Id            INTEGER not null
+　　　        constraint PK_Users
+　　　            primary key autoincrement,
+　　　    Username      TEXT    not null,
+　　　    Email         TEXT    not null,
+　　　    PasswordHash  TEXT    not null,
+　　　    Bio           TEXT    not null,
+　　　    Role          INTEGER not null,
+　　　    LastLatitude  REAL,
+　　　    LastLongitude REAL
+　　　);
+　　　
+　　　Таблиця Dogs:
+　　　
+　　　create table Dogs
+　　　(
+　　　    Id          INTEGER not null
+　　　        constraint PK_Dogs
+　　　            primary key autoincrement,
+　　　    Breed       TEXT,
+　　　    DateOfBirth TEXT    not null,
+　　　    Description TEXT,
+　　　    Name        TEXT    not null,
+　　　    OwnerId     INTEGER not null
+　　　        constraint FK_Dogs_Users_OwnerId
+　　　            references Users
+　　　            on delete cascade,
+　　　    PhotoUrl    TEXT
+　　　);
+　　　
+　　　create index IX_Dogs_OwnerId
+　　　    on Dogs (OwnerId);
+　　　
+　　　
+　　　Таблиця SmartDevices:
+　　　
+　　　create table SmartDevices
+　　　(
+　　　    Id            INTEGER not null
+　　　        constraint PK_SmartDevices
+　　　            primary key autoincrement,
+　　　    DeviceGuid    TEXT    not null,
+　　　    LastLatitude  REAL    not null,
+　　　    LastLongitude REAL    not null,
+　　　    BatteryLevel  REAL    not null,
+　　　    DogId         INTEGER not null
+　　　        constraint FK_SmartDevices_Dogs_DogId
+　　　            references Dogs
+　　　            on delete cascade
+　　　);
+　　　
+　　　create unique index IX_SmartDevices_DogId
+　　　    on SmartDevices (DogId);
+　　　
+　　　
+　　　Таблиця Events:
+　　　
+　　　create table Events
+　　　(
+　　　    Id          INTEGER not null
+　　　        constraint PK_Events
+　　　            primary key autoincrement,
+　　　    Name        TEXT    not null,
+　　　    Description TEXT    not null,
+　　　    StartTime   TEXT    not null,
+　　　    EndTime     TEXT    not null,
+　　　    Type        INTEGER not null,
+　　　    Latitude    REAL    not null,
+　　　    Longitude   REAL    not null,
+　　　    OrganizerId INTEGER not null
+　　　        constraint FK_Events_Users_OrganizerId
+　　　            references Users
+　　　            on delete restrict
+　　　);
+　　　
+　　　create index IX_Events_OrganizerId
+　　　    on Events (OrganizerId);
+　　　
+　　　
+　　　Таблиця Message:
+　　　
+　　　
+　　　create table Messages
+　　　(
+　　　    Id             INTEGER not null
+　　　        constraint PK_Messages
+　　　            primary key autoincrement,
+　　　    Content        TEXT    not null,
+　　　    Timestamp      TEXT    not null,
+　　　    SenderId       INTEGER not null
+　　　        constraint FK_Messages_Users_SenderId
+　　　            references Users
+　　　            on delete cascade,
+　　　    ConversationId INTEGER not null
+　　　        constraint FK_Messages_Conversations_ConversationId
+　　　            references Conversations
+　　　            on delete cascade
+　　　);
+　　　
+　　　create index IX_Messages_ConversationId
+　　　    on Messages (ConversationId);
+　　　
+　　　create index IX_Messages_SenderId
+　　　    on Messages (SenderId);
+　　　
+　　　Таблиця Conversations:
+　　　
+　　　　create table Conversations
+　　　(
+　　　    Id   INTEGER not null
+　　　        constraint PK_Conversations
+　　　            primary key autoincrement,
+　　　    Name TEXT
+　　　);
+　　　
+　　　Таблиця Partners:
+　　　
+　　　
+　　　create table Partners
+　　　(
+　　　    Id          INTEGER not null
+　　　        constraint PK_Partners
+　　　            primary key autoincrement,
+　　　    Name        TEXT    not null,
+　　　    Description TEXT    not null,
+　　　    Address     TEXT    not null,
+　　　    PhoneNumber TEXT    not null,
+　　　    Website     TEXT    not null,
+　　　    Latitude    REAL    not null,
+　　　    Longitude   REAL    not null
+　　　);
+　　　
+　　　Таблиця AdminCodes:
+　　　
+　　　create table AdminCodes
+　　　(
+　　　    Id           INTEGER not null
+　　　        constraint PK_AdminCodes
+　　　            primary key autoincrement,
+　　　    Code         TEXT    not null,
+　　　    IsUsed       INTEGER not null,
+　　　    CreatedAt    TEXT    not null,
+　　　    UsedAt       TEXT,
+　　　    UsedByUserId INTEGER
+　　　        constraint FK_AdminCodes_Users_UsedByUserId
+　　　            references Users
+　　　            on delete set null
+　　　);
+　　　
+　　　create index IX_AdminCodes_UsedByUserId
+　　　    on AdminCodes (UsedByUserId);
+　　　
+　　　Таблиця EventUser:
+　　　
+　　　create table EventUser
+　　　(
+　　　    EventsId       INTEGER not null
+　　　        constraint FK_EventUser_Events_EventsId
+　　　            references Events
+　　　            on delete cascade,
+　　　    ParticipantsId INTEGER not null
+　　　        constraint FK_EventUser_Users_ParticipantsId
+　　　            references Users
+　　　            on delete cascade,
+　　　    constraint PK_EventUser
+　　　        primary key (EventsId, ParticipantsId)
+　　　);
+　　　
+　　　create index IX_EventUser_ParticipantsId
+　　　    on EventUser (ParticipantsId);
+　　　
+　　　
+　　　Таблиця ConversationUser:
+　　　
+　　　create table ConversationUser
+　　　(
+　　　    ConversationsId INTEGER not null
+　　　        constraint FK_ConversationUser_Conversations_ConversationsId
+　　　            references Conversations
+　　　            on delete cascade,
+　　　    ParticipantsId  INTEGER not null
+　　　        constraint FK_ConversationUser_Users_ParticipantsId
+　　　            references Users
+　　　            on delete cascade,
+　　　    constraint PK_ConversationUser
+　　　        primary key (ConversationsId, ParticipantsId)
+　　　);
+　　　
+　　　create index IX_ConversationUser_ParticipantsId
+　　　    on ConversationUser (ParticipantsId);
+　　　
+　　　Таблиця UserUser:
+　　　
+　　　
+　　　create table UserUser
+　　　(
+　　　    FriendsId INTEGER not null
+　　　        constraint FK_UserUser_Users_FriendsId
+　　　            references Users
+　　　            on delete cascade,
+　　　    UserId    INTEGER not null
+　　　        constraint FK_UserUser_Users_UserId
+　　　            references Users
+　　　            on delete cascade,
+　　　    constraint PK_UserUser
+　　　        primary key (FriendsId, UserId)
+　　　);
+　　　
+　　　create index IX_UserUser_UserId
+　　　    on UserUser (UserId);
+　　　
+　　　
+　　　
+　　　А.2  Функції роботи з БД
+　　　AdminCodeRepository
+　　　namespace Infrastructure.Repositories
+　　　{
+　　　    public class AdminCodeRepository : IAdminCodeRepository
+　　　    {
+　　　        private readonly MyDbContext _context;
+　　　
+　　　        public AdminCodeRepository(MyDbContext context)
+　　　        {
+　　　            _context = context;
+　　　        }
+　　　
+　　　        public async Task<AdminCode> GetByCodeAsync(string code)
+　　　        {
+　　　            return await _context.AdminCodes
+　　　                .FirstOrDefaultAsync(ac => ac.Code == code);
+　　　        }
+　　　
+　　　        public async Task<AdminCode> AddAsync(AdminCode adminCode)
+　　　        {
+　　　            _context.AdminCodes.Add(adminCode);
+　　　            await _context.SaveChangesAsync();
+　　　            return adminCode;
+　　　        }
+　　　
+　　　        public async Task MarkAsUsedAsync(int id, int userId)
+　　　        {
+　　　            var adminCode = await _context.AdminCodes.FindAsync(id);
+　　　            if (adminCode != null)
+　　　            {
+　　　                adminCode.IsUsed = true;
+　　　                adminCode.UsedAt = DateTime.UtcNow;
+　　　                adminCode.UsedByUserId = userId;
+　　　                await _context.SaveChangesAsync();
+　　　            }
+　　　        }
+　　　
+　　　        public async Task<List<AdminCode>> GetAllAsync()
+　　　        {
+　　　            return await _context.AdminCodes
+　　　                .Include(ac => ac.UsedBy)
+　　　                .OrderByDescending(ac => ac.CreatedAt)
+　　　                .ToListAsync();
+　　　        }
+　　　
+　　　        public async Task<List<AdminCode>> GetUnusedAsync()
+　　　        {
+　　　            return await _context.AdminCodes
+　　　                .Where(ac => !ac.IsUsed)
+　　　                .OrderByDescending(ac => ac.CreatedAt)
+　　　                .ToListAsync();
+　　　        }
+　　　    }
+　　　}
+　　　
+　　　
+　　　ConversationRepository
+　　　
+　　　namespace Infrastructure.Repositories
+　　　{
+　　　    public class ConversationRepository : IConversationRepository
+　　　    {
+　　　        private readonly MyDbContext _context;
+　　　
+　　　        public ConversationRepository(MyDbContext context)
+　　　        {
+　　　            _context = context;
+　　　        }
+　　　
+　　　        public async Task<Conversation> CreateConversationAsync(Conversation conversation)
+　　　        {
+　　　            await _context.Conversations.AddAsync(conversation);
+　　　            await _context.SaveChangesAsync();
+　　　            return conversation;
+　　　        }
+　　　
+　　　        public async Task<Conversation?> FindPrivateConversationAsync(int user1Id, int user2Id)
+　　　        {
+　　　            // Шукаємо розмову, де є ТІЛЬКИ ці два учасники
+　　　            return await _context.Conversations
+　　　                .Include(c => c.Participants)
+　　　                .Where(c => c.Participants.Count == 2 &&
+　　　                            c.Participants.Any(p => p.Id == user1Id) &&
+　　　                            c.Participants.Any(p => p.Id == user2Id))
+　　　                .FirstOrDefaultAsync();
+　　　        }
+　　　
+　　　        public async Task<Conversation?> GetByIdAsync(int conversationId)
+　　　        {
+　　　            // Дуже важливо завантажити учасників (Participants)
+　　　            // Це потрібно для ChatHub, щоб перевірити, чи є користувач у чаті
+　　　            return await _context.Conversations
+　　　                .Include(c => c.Participants)
+　　　                .FirstOrDefaultAsync(c => c.Id == conversationId);
+　　　        }
+　　　
+　　　        public async Task<IEnumerable<Conversation>> GetUserConversationsAsync(int userId)
+　　　        {
+　　　            // Знаходимо всі розмови, де користувач є учасником
+　　　            return await _context.Conversations
+　　　                .Include(c => c.Participants) // Включаємо учасників, щоб показати, з ким чат
+　　　                .Where(c => c.Participants.Any(p => p.Id == userId))
+　　　                .ToListAsync();
+　　　        }
+　　　    }
+　　　} 
+　　　
+　　　
+　　　DogRepository
+　　　
+　　　public class DogRepository : IDogRepository
+　　　{
+　　　    private readonly MyDbContext _context;
+　　　
+　　　    public DogRepository(MyDbContext context)
+　　　    {
+　　　        _context = context;
+　　　    }
+　　　
+　　　    public async Task<Dog?> GetByIdAsync(int dogId)
+　　　    {
+　　　        return await _context.Dogs.FindAsync(dogId);
+　　　    }
+　　　
+　　　    public async Task<IEnumerable<Dog>> GetByOwnerIdAsync(int ownerId)
+　　　    {
+　　　        return await _context.Dogs
+　　　            .Where(d => d.OwnerId == ownerId)
+　　　            .ToListAsync();
+　　　    }
+　　　
+　　　    public async Task<Dog> AddAsync(Dog dog)
+　　　    {
+　　　        _context.Dogs.Add(dog);
+　　　        await _context.SaveChangesAsync();
+　　　        return dog;
+　　　    }
+　　　
+　　　    public async Task UpdateAsync(Dog dog)
+　　　    {
+　　　        _context.Dogs.Update(dog);
+　　　        await _context.SaveChangesAsync();
+　　　    }
+　　　
+　　　    public async Task DeleteAsync(int dogId)
+　　　    {
+　　　        var dog = await GetByIdAsync(dogId);
+　　　        if (dog != null)
+　　　        {
+　　　            _context.Dogs.Remove(dog);
+　　　            await _context.SaveChangesAsync();
+　　　        }
+　　　    }
+　　　}
+　　　
+　　　
+　　　 EventRepository
+　　　
+　　　namespace Infrastructure.Repositories
+　　　{
+　　　    public class EventRepository : IEventRepository
+　　　    {
+　　　        private readonly MyDbContext _context;
+　　　
+　　　        public EventRepository(MyDbContext context)
+　　　        {
+　　　            _context = context;
+　　　        }
+　　　
+　　　        public async Task<Event?> GetByIdAsync(int eventId)
+　　　        {
+　　　            return await _context.Events
+　　　                .Include(e => e.Organizer)
+　　　                .Include(e => e.Participants)
+　　　                .FirstOrDefaultAsync(e => e.Id == eventId);
+　　　        }
+　　　
+　　　        public async Task<IEnumerable<Event>> GetAllAsync()
+　　　        {
+　　　            return await _context.Events
+　　　                .Include(e => e.Organizer)
+　　　                .ToListAsync();
+　　　        }
+　　　
+　　　        public async Task<IEnumerable<Event>> GetByOrganizerIdAsync(int organizerId)
+　　　        {
+　　　            return await _context.Events
+　　　                .Where(e => e.OrganizerId == organizerId)
+　　　                .Include(e => e.Organizer)
+　　　                .ToListAsync();
+　　　        }
+　　　
+　　　        public async Task<IEnumerable<Event>> GetUpcomingEventsAsync()
+　　　        {
+　　　            return await _context.Events
+　　　                .Where(e => e.StartTime > DateTime.Now)
+　　　                .Include(e => e.Organizer)
+　　　                .OrderBy(e => e.StartTime)
+　　　                .ToListAsync();
+　　　        }
+　　　
+　　　        public async Task<Event> AddAsync(Event eventEntity)
+　　　        {
+　　　            _context.Events.Add(eventEntity);
+　　　            await _context.SaveChangesAsync();
+　　　            return eventEntity;
+　　　        }
+　　　
+　　　        public async Task UpdateAsync(Event eventEntity)
+　　　        {
+　　　            _context.Events.Update(eventEntity);
+　　　            await _context.SaveChangesAsync();
+　　　        }
+　　　
+　　　        public async Task DeleteAsync(int eventId)
+　　　        {
+　　　            var eventEntity = await GetByIdAsync(eventId);
+　　　            if (eventEntity != null)
+　　　            {
+　　　                _context.Events.Remove(eventEntity);
+　　　                await _context.SaveChangesAsync();
+　　　            }
+　　　        }
+　　　    }
+　　　}
+　　　
+　　　
+　　　MessageRepository
+　　　
+　　　namespace Infrastructure.Repositories
+　　　{
+　　　    public class MessageRepository : IMessageRepository
+　　　    {
+　　　        private readonly MyDbContext _context;
+　　　
+　　　        public MessageRepository(MyDbContext context)
+　　　        {
+　　　            _context = context;
+　　　        }
+　　　
+　　　        public async Task<Message> CreateMessageAsync(Message message)
+　　　        {
+　　　            // 1. Додаємо повідомлення
+　　　            await _context.Messages.AddAsync(message);
+　　　            await _context.SaveChangesAsync();
+　　　
+　　　            // 2. Перезавантажуємо повідомлення з даними про відправника
+　　　            // Це потрібно, щоб ChatHub міг відправити повний об'єкт (з ім'ям відправника) іншим клієнтам
+　　　            return await _context.Messages
+　　　                .Include(m => m.Sender)
+　　　                .FirstAsync(m => m.Id == message.Id);
+　　　        }
+　　　
+　　　        public async Task<IEnumerable<Message>> GetMessagesAsync(int conversationId, int count)
+　　　        {
+　　　            // Завантажуємо останні N повідомлень для конкретної розмови
+　　　            return await _context.Messages
+　　　                .Include(m => m.Sender) // Включаємо відправника, щоб знати, хто написав
+　　　                .Where(m => m.ConversationId == conversationId)
+　　　                .OrderByDescending(m => m.Timestamp) // Спочатку беремо найновіші
+　　　                .Take(count)
+　　　                .OrderBy(m => m.Timestamp) // Потім сортуємо їх у правильному порядку (старі -> нові)
+　　　                .ToListAsync();
+　　　        }
+　　　    }
+　　　}
+　　　
+　　　PartnerRepository
+　　　
+　　　namespace Infrastructure.Repositories
+　　　{
+　　　    public class PartnerRepository : IPartnerRepository
+　　　    {
+　　　        private readonly MyDbContext _context;
+　　　
+　　　        public PartnerRepository(MyDbContext context)
+　　　        {
+　　　            _context = context;
+　　　        }
+　　　
+　　　        public async Task<Partner?> GetByIdAsync(int partnerId)
+　　　        {
+　　　            return await _context.Partners.FindAsync(partnerId);
+　　　        }
+　　　
+　　　        public async Task<IEnumerable<Partner>> GetAllAsync()
+　　　        {
+　　　            return await _context.Partners.ToListAsync();
+　　　        }
+　　　
+　　　        public async Task<Partner> AddAsync(Partner partner)
+　　　        {
+　　　            _context.Partners.Add(partner);
+　　　            await _context.SaveChangesAsync();
+　　　            return partner;
+　　　        }
+　　　
+　　　        public async Task UpdateAsync(Partner partner)
+　　　        {
+　　　            _context.Partners.Update(partner);
+　　　            await _context.SaveChangesAsync();
+　　　        }
+　　　
+　　　        public async Task DeleteAsync(int partnerId)
+　　　        {
+　　　            var partner = await GetByIdAsync(partnerId);
+　　　            if (partner != null)
+　　　            {
+　　　                _context.Partners.Remove(partner);
+　　　                await _context.SaveChangesAsync();
+　　　            }
+　　　        }
+　　　    }
+　　　}
+　　　
+　　　SmartDeviceRepository
+　　　
+　　　namespace Infrastructure.Repositories
+　　　{
+　　　    public class SmartDeviceRepository : ISmartDeviceRepository
+　　　    {
+　　　        private readonly MyDbContext _context;
+　　　
+　　　        public SmartDeviceRepository(MyDbContext context)
+　　　        {
+　　　            _context = context;
+　　　        }
+　　　
+　　　        public async Task<SmartDevice?> GetByIdAsync(int deviceId)
+　　　        {
+　　　            return await _context.SmartDevices
+　　　                .Include(sd => sd.Dog)
+　　　                .FirstOrDefaultAsync(sd => sd.Id == deviceId);
+　　　        }
+　　　
+　　　        public async Task<SmartDevice?> GetByDogIdAsync(int dogId)
+　　　        {
+　　　            return await _context.SmartDevices
+　　　                .Include(sd => sd.Dog)
+　　　                .FirstOrDefaultAsync(sd => sd.DogId == dogId);
+　　　        }
+　　　
+　　　        public async Task<SmartDevice?> GetByDeviceGuidAsync(string deviceGuid)
+　　　        {
+　　　            return await _context.SmartDevices
+　　　                .Include(sd => sd.Dog)
+　　　                .FirstOrDefaultAsync(sd => sd.DeviceGuid == deviceGuid);
+　　　        }
+　　　
+　　　        public async Task<IEnumerable<SmartDevice>> GetAllAsync()
+　　　        {
+　　　            return await _context.SmartDevices
+　　　                .Include(sd => sd.Dog)
+　　　                .ToListAsync();
+　　　        }
+　　　
+　　　        public async Task<SmartDevice> AddAsync(SmartDevice device)
+　　　        {
+　　　            _context.SmartDevices.Add(device);
+　　　            await _context.SaveChangesAsync();
+　　　            return device;
+　　　        }
+　　　
+　　　        public async Task UpdateAsync(SmartDevice device)
+　　　        {
+　　　            _context.SmartDevices.Update(device);
+　　　            await _context.SaveChangesAsync();
+　　　        }
+　　　
+　　　        public async Task DeleteAsync(int deviceId)
+　　　        {
+　　　            var device = await GetByIdAsync(deviceId);
+　　　            if (device != null)
+　　　            {
+　　　                _context.SmartDevices.Remove(device);
+　　　                await _context.SaveChangesAsync();
+　　　            }
+　　　        }
+　　　    }
+　　　}
+　　　
+　　　
+　　　
+　　　
+　　　UserRepository
+　　　
+　　　namespace Infrastructure.Repositories
+　　　{
+　　　    public class UserRepository : IUserRepository
+　　　    {
+　　　        private readonly MyDbContext _context;
+　　　
+　　　        public UserRepository(MyDbContext context)
+　　　        {
+　　　            _context = context;
+　　　        }
+　　　
+　　　        public async Task<User> GetUserByEmailAsync(string email)
+　　　        {
+　　　            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+　　　        }
+　　　
+　　　        public async Task<bool> DoesUserExistAsync(string email)
+　　　        {
+　　　            return await _context.Users.AnyAsync(u => u.Email == email);
+　　　        }
+　　　
+　　　        public async Task<User> AddUserAsync(User user)
+　　　        {
+　　　            _context.Users.Add(user);
+　　　            await _context.SaveChangesAsync();
+　　　            return user;
+　　　        }
+　　　    }
+　　　} 
+
+
+　　　ДОДАТОК Б
+　　　Посилання на код
+　　　https://github.com/NureSaltykovaYuliia/ark-pzpi-23-10-saltykova-yuliia/tree/main/Task2/arkpz-pzpi-23-10-saltykova-yuliia-task2
+　　　
+
+
+
+　　　
+                                                                                              

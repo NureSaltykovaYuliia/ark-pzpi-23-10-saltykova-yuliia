@@ -1,5 +1,4 @@
 using Application.Abstractions.Interfaces;
-using Entities.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -11,11 +10,11 @@ namespace MyDogSpace.Controllers
     [Authorize(Roles = "Admin")]
     public class AdminCodesController : ControllerBase
     {
-        private readonly IAdminCodeRepository _adminCodeRepository;
+        private readonly IAdminCodeService _adminCodeService;
 
-        public AdminCodesController(IAdminCodeRepository adminCodeRepository)
+        public AdminCodesController(IAdminCodeService adminCodeService)
         {
-            _adminCodeRepository = adminCodeRepository;
+            _adminCodeService = adminCodeService;
         }
 
         private int GetCurrentUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
@@ -25,14 +24,7 @@ namespace MyDogSpace.Controllers
         {
             try
             {
-                var adminCode = new AdminCode
-                {
-                    Code = GenerateUniqueCode(),
-                    IsUsed = false,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                var createdCode = await _adminCodeRepository.AddAsync(adminCode);
+                var createdCode = await _adminCodeService.CreateAdminCodeAsync();
                 return Ok(new { code = createdCode.Code, message = "Код адміністратора створено успішно" });
             }
             catch (Exception ex)
@@ -46,7 +38,7 @@ namespace MyDogSpace.Controllers
         {
             try
             {
-                var codes = await _adminCodeRepository.GetAllAsync();
+                var codes = await _adminCodeService.GetAllAdminCodesAsync();
                 return Ok(codes);
             }
             catch (Exception ex)
@@ -60,7 +52,7 @@ namespace MyDogSpace.Controllers
         {
             try
             {
-                var codes = await _adminCodeRepository.GetUnusedAsync();
+                var codes = await _adminCodeService.GetUnusedAdminCodesAsync();
                 return Ok(codes);
             }
             catch (Exception ex)
@@ -69,38 +61,19 @@ namespace MyDogSpace.Controllers
             }
         }
 
-        // Публічний endpoint для створення першого коду адміністратора (тільки якщо кодів ще немає)
         [HttpPost("initialize")]
         [AllowAnonymous]
         public async Task<IActionResult> CreateFirstAdminCode()
         {
             try
             {
-                var existingCodes = await _adminCodeRepository.GetAllAsync();
-                if (existingCodes.Count > 0)
-                {
-                    return BadRequest(new { message = "Коди адміністратора вже існують. Використовуйте звичайний endpoint." });
-                }
-
-                var adminCode = new AdminCode
-                {
-                    Code = GenerateUniqueCode(),
-                    IsUsed = false,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                var createdCode = await _adminCodeRepository.AddAsync(adminCode);
+                var createdCode = await _adminCodeService.CreateFirstAdminCodeAsync();
                 return Ok(new { code = createdCode.Code, message = "Перший код адміністратора створено успішно" });
             }
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
             }
-        }
-
-        private string GenerateUniqueCode()
-        {
-            return Guid.NewGuid().ToString("N").Substring(0, 16).ToUpper();
         }
     }
 }

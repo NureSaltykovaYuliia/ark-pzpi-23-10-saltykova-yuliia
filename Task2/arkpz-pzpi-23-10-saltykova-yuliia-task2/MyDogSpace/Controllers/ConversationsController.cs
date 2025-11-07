@@ -1,4 +1,4 @@
-﻿using Entities.Models;
+﻿using Application.Abstractions.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -8,13 +8,11 @@ using System.Security.Claims;
 [Authorize]
 public class ConversationsController : ControllerBase
 {
-    private readonly IConversationRepository _convRepo;
-    private readonly IMessageRepository _messageRepo;
+    private readonly IConversationService _conversationService;
 
-    public ConversationsController(IConversationRepository convRepo, IMessageRepository messageRepo)
+    public ConversationsController(IConversationService conversationService)
     {
-        _convRepo = convRepo;
-        _messageRepo = messageRepo;
+        _conversationService = conversationService;
     }
 
     private int GetCurrentUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
@@ -22,13 +20,14 @@ public class ConversationsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetMyConversations()
     {
-        var conversations = await _convRepo.GetUserConversationsAsync(GetCurrentUserId());
+        var conversations = await _conversationService.GetUserConversationsAsync(GetCurrentUserId());
         return Ok(conversations);
     }
+
     [HttpGet("{id}/messages")]
     public async Task<IActionResult> GetMessageHistory(int id)
     {
-        var messages = await _messageRepo.GetMessagesAsync(id, count: 50); 
+        var messages = await _conversationService.GetMessageHistoryAsync(id, count: 50);
         return Ok(messages);
     }
 }

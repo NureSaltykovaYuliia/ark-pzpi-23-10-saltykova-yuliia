@@ -1,6 +1,5 @@
 using Application.Abstractions.Interfaces;
 using Application.DTOs;
-using Entities.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -12,11 +11,11 @@ namespace MyDogSpace.Controllers
     [Authorize]
     public class EventsController : ControllerBase
     {
-        private readonly IEventRepository _eventRepository;
+        private readonly IEventService _eventService;
 
-        public EventsController(IEventRepository eventRepository)
+        public EventsController(IEventService eventService)
         {
-            _eventRepository = eventRepository;
+            _eventService = eventService;
         }
 
         private int GetCurrentUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
@@ -24,82 +23,29 @@ namespace MyDogSpace.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllEvents()
         {
-            var events = await _eventRepository.GetAllAsync();
-            var eventDtos = events.Select(e => new EventDto
-            {
-                Id = e.Id,
-                Name = e.Name,
-                Description = e.Description,
-                StartTime = e.StartTime,
-                EndTime = e.EndTime,
-                Type = e.Type.ToString(),
-                Latitude = e.Latitude,
-                Longitude = e.Longitude,
-                OrganizerId = e.OrganizerId,
-                OrganizerName = e.Organizer?.Username
-            });
-            return Ok(eventDtos);
+            var events = await _eventService.GetAllEventsAsync();
+            return Ok(events);
         }
 
         [HttpGet("upcoming")]
         public async Task<IActionResult> GetUpcomingEvents()
         {
-            var events = await _eventRepository.GetUpcomingEventsAsync();
-            var eventDtos = events.Select(e => new EventDto
-            {
-                Id = e.Id,
-                Name = e.Name,
-                Description = e.Description,
-                StartTime = e.StartTime,
-                EndTime = e.EndTime,
-                Type = e.Type.ToString(),
-                Latitude = e.Latitude,
-                Longitude = e.Longitude,
-                OrganizerId = e.OrganizerId,
-                OrganizerName = e.Organizer?.Username
-            });
-            return Ok(eventDtos);
+            var events = await _eventService.GetUpcomingEventsAsync();
+            return Ok(events);
         }
 
         [HttpGet("my")]
         public async Task<IActionResult> GetMyEvents()
         {
-            var events = await _eventRepository.GetByOrganizerIdAsync(GetCurrentUserId());
-            var eventDtos = events.Select(e => new EventDto
-            {
-                Id = e.Id,
-                Name = e.Name,
-                Description = e.Description,
-                StartTime = e.StartTime,
-                EndTime = e.EndTime,
-                Type = e.Type.ToString(),
-                Latitude = e.Latitude,
-                Longitude = e.Longitude,
-                OrganizerId = e.OrganizerId,
-                OrganizerName = e.Organizer?.Username
-            });
-            return Ok(eventDtos);
+            var events = await _eventService.GetEventsByOrganizerIdAsync(GetCurrentUserId());
+            return Ok(events);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetEventById(int id)
         {
-            var eventEntity = await _eventRepository.GetByIdAsync(id);
-            if (eventEntity == null) return NotFound();
-
-            var eventDto = new EventDto
-            {
-                Id = eventEntity.Id,
-                Name = eventEntity.Name,
-                Description = eventEntity.Description,
-                StartTime = eventEntity.StartTime,
-                EndTime = eventEntity.EndTime,
-                Type = eventEntity.Type.ToString(),
-                Latitude = eventEntity.Latitude,
-                Longitude = eventEntity.Longitude,
-                OrganizerId = eventEntity.OrganizerId,
-                OrganizerName = eventEntity.Organizer?.Username
-            };
+            var eventDto = await _eventService.GetEventByIdAsync(id);
+            if (eventDto == null) return NotFound();
             return Ok(eventDto);
         }
 
@@ -109,20 +55,15 @@ namespace MyDogSpace.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var eventEntity = new Event
+            try
             {
-                Name = eventDto.Name,
-                Description = eventDto.Description,
-                StartTime = eventDto.StartTime,
-                EndTime = eventDto.EndTime,
-                Type = eventDto.Type,
-                Latitude = eventDto.Latitude,
-                Longitude = eventDto.Longitude,
-                OrganizerId = GetCurrentUserId()
-            };
-
-            var createdEvent = await _eventRepository.AddAsync(eventEntity);
-            return CreatedAtAction(nameof(GetEventById), new { id = createdEvent.Id }, createdEvent);
+                var createdEvent = await _eventService.CreateEventAsync(eventDto, GetCurrentUserId());
+                return CreatedAtAction(nameof(GetEventById), new { id = createdEvent.Id }, createdEvent);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPut("{id}")]
@@ -131,31 +72,37 @@ namespace MyDogSpace.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var eventEntity = await _eventRepository.GetByIdAsync(id);
-            if (eventEntity == null) return NotFound();
-            if (eventEntity.OrganizerId != GetCurrentUserId()) return Forbid();
-
-            eventEntity.Name = eventDto.Name;
-            eventEntity.Description = eventDto.Description;
-            eventEntity.StartTime = eventDto.StartTime;
-            eventEntity.EndTime = eventDto.EndTime;
-            eventEntity.Type = eventDto.Type;
-            eventEntity.Latitude = eventDto.Latitude;
-            eventEntity.Longitude = eventDto.Longitude;
-
-            await _eventRepository.UpdateAsync(eventEntity);
-            return NoContent();
+            try
+            {
+                await _eventService.UpdateEventAsync(id, eventDto, GetCurrentUserId());
+                return NoContent();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEvent(int id)
         {
-            var eventEntity = await _eventRepository.GetByIdAsync(id);
-            if (eventEntity == null) return NotFound();
-            if (eventEntity.OrganizerId != GetCurrentUserId()) return Forbid();
-
-            await _eventRepository.DeleteAsync(id);
-            return NoContent();
+            try
+            {
+                await _eventService.DeleteEventAsync(id, GetCurrentUserId());
+                return NoContent();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }
