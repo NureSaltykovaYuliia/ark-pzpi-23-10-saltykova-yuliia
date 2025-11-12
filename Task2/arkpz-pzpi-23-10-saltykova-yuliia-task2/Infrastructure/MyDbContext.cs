@@ -57,7 +57,7 @@ namespace Infrastructure
                 .HasOne(ac => ac.UsedBy)
                 .WithMany()
                 .HasForeignKey(ac => ac.UsedByUserId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

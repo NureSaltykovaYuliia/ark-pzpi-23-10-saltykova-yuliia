@@ -15,9 +15,21 @@ namespace Application.Services
             _dogRepository = dogRepository;
         }
 
-        public async Task<IEnumerable<SmartDeviceDto>> GetAllDevicesAsync()
+        public async Task<IEnumerable<SmartDeviceDto>> GetAllDevicesAsync(int userId, string userRole)
         {
-            var devices = await _deviceRepository.GetAllAsync();
+            IEnumerable<SmartDevice> devices;
+
+            // Якщо користувач - адміністратор, показуємо всі пристрої
+            if (userRole == "Admin")
+            {
+                devices = await _deviceRepository.GetAllAsync();
+            }
+            else
+            {
+                // Інакше показуємо тільки пристрої собак цього користувача
+                devices = await _deviceRepository.GetByUserIdAsync(userId);
+            }
+
             return devices.Select(d => MapToDto(d));
         }
 

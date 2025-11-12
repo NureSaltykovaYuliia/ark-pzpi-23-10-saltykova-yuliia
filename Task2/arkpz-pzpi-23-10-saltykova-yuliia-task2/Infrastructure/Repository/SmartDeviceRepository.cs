@@ -42,6 +42,14 @@ namespace Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<SmartDevice>> GetByUserIdAsync(int userId)
+        {
+            return await _context.SmartDevices
+                .Include(sd => sd.Dog)
+                .Where(sd => sd.Dog != null && sd.Dog.OwnerId == userId)
+                .ToListAsync();
+        }
+
         public async Task<SmartDevice> AddAsync(SmartDevice device)
         {
             _context.SmartDevices.Add(device);

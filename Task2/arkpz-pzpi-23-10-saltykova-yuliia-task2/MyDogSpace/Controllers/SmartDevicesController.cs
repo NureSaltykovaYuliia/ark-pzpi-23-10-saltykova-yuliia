@@ -20,10 +20,12 @@ namespace MyDogSpace.Controllers
 
         private int GetCurrentUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
+        private string GetCurrentUserRole() => User.FindFirstValue(ClaimTypes.Role) ?? "DogOwner";
+
         [HttpGet]
         public async Task<IActionResult> GetAllDevices()
         {
-            var devices = await _deviceService.GetAllDevicesAsync();
+            var devices = await _deviceService.GetAllDevicesAsync(GetCurrentUserId(), GetCurrentUserRole());
             return Ok(devices);
         }
 

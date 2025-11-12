@@ -24,6 +24,7 @@ public class Program
 
         // Register Services
         builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<IDogService, DogService>();
         builder.Services.AddScoped<IEventService, EventService>();
         builder.Services.AddScoped<ISmartDeviceService, SmartDeviceService>();

@@ -8,6 +8,7 @@ namespace Application.Abstractions.Interfaces
         Task<SmartDevice?> GetByDogIdAsync(int dogId);
         Task<SmartDevice?> GetByDeviceGuidAsync(string deviceGuid);
         Task<IEnumerable<SmartDevice>> GetAllAsync();
+        Task<IEnumerable<SmartDevice>> GetByUserIdAsync(int userId);
         Task<SmartDevice> AddAsync(SmartDevice device);
         Task UpdateAsync(SmartDevice device);
         Task DeleteAsync(int deviceId);

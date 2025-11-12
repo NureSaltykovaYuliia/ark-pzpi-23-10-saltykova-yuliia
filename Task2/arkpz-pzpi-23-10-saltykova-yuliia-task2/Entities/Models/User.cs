@@ -12,13 +12,18 @@ namespace Entities.Models
         public int Id { get; set; }
         public string Username { get; set; }
         public string Email { get; set; }
-        public string PasswordHash { get; set; } 
-        public string Bio { get; set; } 
+        public string PasswordHash { get; set; }
+        public string Bio { get; set; }
         public UserRole Role { get; set; }
 
-        // Геолокація для пошуку компаньйонів
+        // Геолокація для пошуку компаньйонів (координати адреси користувача)
         public double? LastLatitude { get; set; }
         public double? LastLongitude { get; set; }
+
+        // Активність та безпека
+        public DateTime? LastActivity { get; set; } // Остання активність користувача
+        public bool IsBlocked { get; set; } = false; // Блокування адміністратором
+        public string? BlockReason { get; set; } // Причина блокування
 
         // Навігаційні властивості (зв'язки)
         public ICollection<Dog> Dogs { get; set; } = new List<Dog>(); // Мої собаки
