@@ -11,7 +11,7 @@ namespace Infrastructure
 {
     public class MyDbContext : DbContext
     {
-        
+
         public MyDbContext(DbContextOptions<MyDbContext> options) : base(options) { }
 
         public DbSet<User> Users { get; set; }
@@ -43,21 +43,44 @@ namespace Infrastructure
                 .HasForeignKey(e => e.OrganizerId)
                 .OnDelete(DeleteBehavior.Restrict); 
 
+            // Dog → User (видалення користувача → видалення його собак)
             modelBuilder.Entity<Dog>()
                 .HasOne(d => d.Owner)
                 .WithMany(u => u.Dogs)
-                .HasForeignKey(d => d.OwnerId);
+                .HasForeignKey(d => d.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
 
+            // Dog ↔ SmartDevice (видалення собаки → видалення пристрою)
             modelBuilder.Entity<Dog>()
                 .HasOne(d => d.SmartDevice)
                 .WithOne(sd => sd.Dog)
-                .HasForeignKey<SmartDevice>(sd => sd.DogId);
+                .HasForeignKey<SmartDevice>(sd => sd.DogId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<AdminCode>()
                 .HasOne(ac => ac.UsedBy)
                 .WithMany()
                 .HasForeignKey(ac => ac.UsedByUserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Message → Conversation (видалення розмови → видалення всіх повідомлень)
+            modelBuilder.Entity<Message>()
+                .HasOne(m => m.Conversation)
+                .WithMany(c => c.Messages)
+                .HasForeignKey(m => m.ConversationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Message → Sender (НЕ можна видалити користувача, якщо є його повідомлення)
+            modelBuilder.Entity<Message>()
+                .HasOne(m => m.Sender)
+                .WithMany(u => u.SentMessages)
+                .HasForeignKey(m => m.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Conversation ↔ User (Many-to-Many) - учасники розмови
+            modelBuilder.Entity<Conversation>()
+                .HasMany(c => c.Participants)
+                .WithMany(u => u.Conversations);
         }
     }
 }
