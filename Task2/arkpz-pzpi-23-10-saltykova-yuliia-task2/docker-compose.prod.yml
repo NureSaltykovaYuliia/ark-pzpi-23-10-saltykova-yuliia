@@ -1,0 +1,74 @@
+version: '3.8'
+
+# Production конфигурация с Nginx reverse proxy
+# Использование: docker-compose -f docker-compose.prod.yml up -d
+
+services:
+  # ASP.NET Core API
+  mydogspace-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mydogspace-api
+    restart: always
+
+    expose:
+      - "8080"  # Внутренний порт, не публикуется наружу
+
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/MyDogSpace.db;Foreign Keys=True
+      - AppSettings__Token=${JWT_SECRET}
+      - Logging__LogLevel__Default=Warning
+      - Logging__LogLevel__Microsoft.AspNetCore=Warning
+
+    volumes:
+      - mydogspace-data:/app/data
+      - ./logs:/app/logs
+
+    networks:
+      - mydogspace-network
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: mydogspace-nginx
+    restart: always
+
+    ports:
+      - "80:80"      # HTTP
+      - "443:443"    # HTTPS (если настроены сертификаты)
+
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro  # SSL сертификаты (опционально)
+
+    networks:
+      - mydogspace-network
+
+    depends_on:
+      - mydogspace-api
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mydogspace-data:
+    driver: local
+    name: mydogspace-data
+
+networks:
+  mydogspace-network:
+    driver: bridge
+    name: mydogspace-network

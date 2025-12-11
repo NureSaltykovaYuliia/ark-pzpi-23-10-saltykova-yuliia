@@ -28,16 +28,17 @@ RUN dotnet publish "MyDogSpace.csproj" -c Release -o /app/publish /p:UseAppHost=
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
-# Створюємо папку для бази даних (якщо використовується SQLite або локальні файли)
-# На скріншоті видно папку DB_Storage в Infrastructure
-RUN mkdir -p /app/Infrastructure/DB_Storage
+# Встановлюємо curl для healthcheck
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Копіюємо опубліковані файли з етапу build
+# Створюємо папку для бази даних з правильними правами
+RUN mkdir -p /app/data && chmod 777 /app/data
+
+# Копіюємо опубліковані файли з етапу publish
 COPY --from=publish /app/publish .
 
-# Відкриваємо порти
+# Відкриваємо порт (тільки HTTP, HTTPS налаштовується окремо)
 EXPOSE 8080
-EXPOSE 8081
 
 # Налаштування змінних середовища
 ENV ASPNETCORE_URLS=http://+:8080

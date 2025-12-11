@@ -88,15 +88,46 @@ public class Program
        
         var app = builder.Build();
 
-        if (app.Environment.IsDevelopment())
+        // Применяем миграции автоматически при запуске (для Production)
+        using (var scope = app.Services.CreateScope())
         {
-            app.UseSwagger();
-            app.UseSwaggerUI();
+            var dbContext = scope.ServiceProvider.GetRequiredService<MyDbContext>();
+            try
+            {
+                dbContext.Database.Migrate();
+                Console.WriteLine("Database migrations applied successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error applying migrations: {ex.Message}");
+            }
         }
 
-        app.UseHttpsRedirection();
+        // Swagger доступен во всех окружениях
+        app.UseSwagger();
+        app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "MyDogSpace API v1");
+            c.RoutePrefix = "swagger"; // Доступен по /swagger
+        });
+
+        // В Production отключаем HTTPS redirect (настраивается на уровне reverse proxy)
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseHttpsRedirection();
+        }
+
         app.UseAuthentication();
         app.UseAuthorization();
+
+        // Health check endpoint для мониторинга
+        app.MapGet("/api/health", () => Results.Ok(new
+        {
+            status = "healthy",
+            timestamp = DateTime.UtcNow,
+            environment = app.Environment.EnvironmentName
+        }));
+
         app.MapHub<ChatHub>("/chathub");
         app.MapControllers();
         app.Run();

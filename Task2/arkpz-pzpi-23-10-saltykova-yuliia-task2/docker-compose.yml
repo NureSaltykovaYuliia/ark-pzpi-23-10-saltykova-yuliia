@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  mydogspace-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mydogspace-api
+    restart: unless-stopped
+
+    ports:
+      - "8080:8080"    # HTTP порт для API
+
+    environment:
+      # ASP.NET Core настройки
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+
+      # База данных (SQLite)
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/MyDogSpace.db;Foreign Keys=True
+
+      # Логирование
+      - Logging__LogLevel__Default=Information
+      - Logging__LogLevel__Microsoft.AspNetCore=Warning
+
+    volumes:
+      # Постоянное хранилище для SQLite базы данных
+      - mydogspace-data:/app/data
+
+      # Опционально: логи (если нужно сохранять логи)
+      # - ./logs:/app/logs
+
+    networks:
+      - mydogspace-network
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Volumes для постоянного хранения данных
+volumes:
+  mydogspace-data:
+    driver: local
+    name: mydogspace-data
+
+# Сеть для изоляции контейнеров
+networks:
+  mydogspace-network:
+    driver: bridge
+    name: mydogspace-network
