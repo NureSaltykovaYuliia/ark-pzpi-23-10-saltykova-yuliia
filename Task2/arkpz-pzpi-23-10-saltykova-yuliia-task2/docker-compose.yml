@@ -25,10 +25,7 @@ services:
 
     volumes:
       # Постоянное хранилище для SQLite базы данных
-      - mydogspace-data:/app/data
-
-      # Опционально: логи (если нужно сохранять логи)
-      # - ./logs:/app/logs
+      - ./Infrastructure/DB_Storage:/app/data
 
     networks:
       - mydogspace-network
@@ -39,12 +36,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-# Volumes для постоянного хранения данных
-volumes:
-  mydogspace-data:
-    driver: local
-    name: mydogspace-data
 
 # Сеть для изоляции контейнеров
 networks:
