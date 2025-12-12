@@ -1,46 +1,56 @@
-"""
-Configuration file for ESP32 IoT Device
-Конфігураційний файл для IoT пристрою ESP32
-"""
+# config.py
 
-# WiFi Configuration
-WIFI_SSID = "Wokwi-GUEST"  # Default Wokwi WiFi
+# === API конфігурація ===
+# Віддалений сервер MyDogSpace
+API_BASE_URL = "http://35.192.164.131:8080/api"
+API_AUTH_REGISTER = "/auth/register"
+API_AUTH_LOGIN = "/auth/login"
+API_SMART_DEVICES = "/smartdevices"
+API_ALERTS = "/alerts"
+
+# === WiFi конфігурація ===
+WIFI_SSID = "Wokwi-GUEST"
 WIFI_PASSWORD = ""
 
-# API Configuration
-API_BASE_URL = "http://192.168.1.100:5104/api"  # Change to your API server IP
-API_SMARTDEVICES_ENDPOINT = "/smartdevices"
+# === Пристрій конфігурація ===
+# Унікальний GUID пристрою
+DEVICE_GUID = "ESP32-WOKWI-001"
 
-# Device Configuration
-DEVICE_GUID = "ESP32-DOG-TRACKER-001"  # Unique device identifier
-DEVICE_ID = None  # Will be set after registration
+# ID собаки (встановлюється після реєстрації)
+DOG_ID = None
 
-# GPS Simulation Configuration
-GPS_UPDATE_INTERVAL = 10  # seconds
-GPS_SIMULATION_ENABLED = True
-GPS_START_LAT = 50.4501  # Kyiv coordinates
-GPS_START_LON = 30.5234
-GPS_MOVEMENT_SPEED = 0.0001  # degrees per update (simulated movement)
+# === Користувач для тестування ===
+TEST_USER = {
+    "username": "testuser456",
+    "email": "test456@example.com",
+    "password": "password123"
+}
 
-# Battery Configuration
-BATTERY_UPDATE_INTERVAL = 30  # seconds
-BATTERY_SIMULATION_ENABLED = True
-BATTERY_INITIAL_LEVEL = 100.0
-BATTERY_DRAIN_RATE = 0.1  # percent per minute
+# === Налаштування сенсорів ===
+# GPS симуляція
+GPS_UPDATE_INTERVAL = 10  # секунд
+DEFAULT_LATITUDE = 50.4501
+DEFAULT_LONGITUDE = 30.5234
 
-# Data Buffering Configuration
-MAX_BUFFER_SIZE = 50  # Maximum number of records to buffer
-SEND_INTERVAL = 15  # seconds between send attempts
+# === НОВЕ: Налаштування Гео-зон (Geofencing) ===
+# Координати "Забороненої зони" (наприклад, дорога або чуже подвір'я)
+DANGER_ZONE = {
+    "lat": 50.4501,  # Центр зони (співпадає з дефолтним для тесту)
+    "lon": 30.5234,
+    "radius": 100    # Якщо собака ближче ніж 100м — тривога!
+}
 
-# LED Pins Configuration
-LED_WIFI_PIN = 2      # Blue LED - WiFi status
-LED_GPS_PIN = 4       # Green LED - GPS status
-LED_BATTERY_PIN = 5   # Yellow LED - Battery warning (<20%)
-LED_API_PIN = 18      # Red LED - API communication
+# Моніторинг батареї
+BATTERY_CHECK_INTERVAL = 30  # секунд
+BATTERY_LOW_THRESHOLD = 20   # %
 
-# Button Configuration
-BUTTON_MANUAL_SEND_PIN = 15  # Button for manual data send
+# === Налаштування відправки даних ===
+DATA_SEND_INTERVAL = 5  # Зменшив до 5 секунд, щоб ви швидше бачили результат у консолі!
+SEND_INTERVAL = 5       # Дублюємо для сумісності з новим кодом
 
-# Debug Configuration
-DEBUG_MODE = True
-SERIAL_BAUD_RATE = 115200
+# === LED індикатори ===
+LED_WIFI_PIN = 2    # Вбудований LED для WiFi статусу
+LED_STATUS_PIN = 4  # LED для статусу підключення до API
+
+# === Режим debug ===
+DEBUG = True

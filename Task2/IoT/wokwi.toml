@@ -1,8 +1,32 @@
 [wokwi]
 version = 1
-firmware = "micropython-esp32"
-elf = "build/firmware.elf"
+elf = ''
 
-[[net.forward]]
-from = "localhost:5104"
-to = "target:5104"
+# Підключення до віддаленого API сервера
+# http://35.192.164.131:8080/api
+# Port forwarding не потрібен для віддалених серверів
+
+# Завантаження всіх Python файлів на ESP32
+[[file]]
+path = "main.py"
+
+[[file]]
+path = "config.py"
+
+[[file]]
+path = "auth.py"
+
+[[file]]
+path = "device_manager.py"
+
+[[file]]
+path = "gps_sensor.py"
+
+[[file]]
+path = "battery_monitor.py"
+
+[[file]]
+path = "geo.py"
+
+[[file]]
+path = "geofence_monitor.py"
