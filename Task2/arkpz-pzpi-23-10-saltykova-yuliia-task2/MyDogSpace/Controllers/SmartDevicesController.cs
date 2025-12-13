@@ -126,5 +126,56 @@ namespace MyDogSpace.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        // Endpoints для роботи пристрою (без авторизації)
+        [AllowAnonymous]
+        [HttpPost("register-device")]
+        public async Task<IActionResult> RegisterDevice([FromBody] RegisterDeviceDto registerDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var device = await _deviceService.RegisterDeviceAsync(registerDto.DeviceGuid);
+                return Ok(device);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [AllowAnonymous]
+        [HttpGet("device/{deviceGuid}/dog")]
+        public async Task<IActionResult> GetDogIdByDeviceGuid(string deviceGuid)
+        {
+            try
+            {
+                var dogId = await _deviceService.GetDogIdByDeviceGuidAsync(deviceGuid);
+                if (dogId == null)
+                    return Ok(new { dogId = (int?)null, message = "Собака ще не призначена цьому пристрою" });
+
+                return Ok(new { dogId = dogId.Value });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("device/{deviceGuid}/assign-to-my-dog")]
+        public async Task<IActionResult> AssignDeviceToMyDog(string deviceGuid)
+        {
+            try
+            {
+                await _deviceService.AssignDeviceToFirstDogAsync(deviceGuid, GetCurrentUserId());
+                return Ok(new { message = "Пристрій успішно прив'язано до вашої собаки" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

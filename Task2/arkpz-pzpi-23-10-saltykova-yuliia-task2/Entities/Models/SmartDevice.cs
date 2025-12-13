@@ -15,7 +15,7 @@ namespace Entities.Models
         public double BatteryLevel { get; set; } 
 
         // Зв'язок "один-до-одного": пристрій прив'язаний до однієї собаки
-        public int DogId { get; set; }
-        public Dog Dog { get; set; }
+        public int? DogId { get; set; }
+        public Dog? Dog { get; set; }
     }
 }

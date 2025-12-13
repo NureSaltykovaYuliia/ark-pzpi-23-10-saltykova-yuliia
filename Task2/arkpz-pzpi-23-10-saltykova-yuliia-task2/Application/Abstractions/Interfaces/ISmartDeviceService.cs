@@ -10,5 +10,12 @@ namespace Application.Abstractions.Interfaces
         Task<SmartDeviceDto> CreateDeviceAsync(CreateSmartDeviceDto deviceDto, int userId);
         Task UpdateDeviceAsync(int id, UpdateSmartDeviceDto deviceDto, int userId);
         Task DeleteDeviceAsync(int id, int userId);
+
+        // Методи для роботи пристрою (без авторизації)
+        Task<SmartDeviceDto> RegisterDeviceAsync(string deviceGuid);
+        Task<int?> GetDogIdByDeviceGuidAsync(string deviceGuid);
+
+        // Метод для прив'язки пристрою до собаки (з авторизацією)
+        Task AssignDeviceToFirstDogAsync(string deviceGuid, int userId);
     }
 }

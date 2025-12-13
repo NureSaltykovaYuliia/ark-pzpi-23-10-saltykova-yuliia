@@ -7,7 +7,7 @@ namespace Application.DTOs
         public double LastLatitude { get; set; }
         public double LastLongitude { get; set; }
         public double BatteryLevel { get; set; }
-        public int DogId { get; set; }
-        public string DogName { get; set; }
+        public int? DogId { get; set; }
+        public string? DogName { get; set; }
     }
 }
