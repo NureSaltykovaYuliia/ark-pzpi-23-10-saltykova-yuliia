@@ -162,27 +162,31 @@ namespace Application.Services
             return device.DogId;
         }
 
-        public async Task AssignDeviceToFirstDogAsync(string deviceGuid, int userId)
+        public async Task AssignDeviceToDogAsync(string deviceGuid, int dogId, int userId)
         {
-            // Знаходимо пристрій
+            // 1. Знаходимо пристрій
             var device = await _deviceRepository.GetByDeviceGuidAsync(deviceGuid);
             if (device == null)
                 throw new Exception("Пристрій не знайдено");
 
-            // Знаходимо першу собаку користувача
+            // 2. Отримуємо список собак користувача, щоб перевірити права власності
             var userDogs = await _dogRepository.GetByOwnerIdAsync(userId);
-            var firstDog = userDogs.FirstOrDefault();
 
-            if (firstDog == null)
-                throw new Exception("У вас немає собак");
+            // Шукаємо конкретну собаку за ID серед собак користувача
+            var targetDog = userDogs.FirstOrDefault(d => d.Id == dogId);
 
-            // Перевіряємо, чи вже є пристрій у цієї собаки
-            var existingDevice = await _deviceRepository.GetByDogIdAsync(firstDog.Id);
+            if (targetDog == null)
+                throw new Exception("Собаку не знайдено або вона вам не належить");
+
+            // 3. Перевіряємо, чи вже є пристрій у цієї собаки
+            var existingDevice = await _deviceRepository.GetByDogIdAsync(targetDog.Id);
+
+            // Якщо у собаки є пристрій, і це НЕ той самий, який ми намагаємося підключити
             if (existingDevice != null && existingDevice.Id != device.Id)
                 throw new Exception("До цієї собаки вже прикріплений інший пристрій");
 
-            // Прив'язуємо пристрій до собаки
-            device.DogId = firstDog.Id;
+            // 4. Прив'язуємо пристрій до вибраної собаки
+            device.DogId = targetDog.Id;
             await _deviceRepository.UpdateAsync(device);
         }
 

@@ -16,6 +16,6 @@ namespace Application.Abstractions.Interfaces
         Task<int?> GetDogIdByDeviceGuidAsync(string deviceGuid);
 
         // Метод для прив'язки пристрою до собаки (з авторизацією)
-        Task AssignDeviceToFirstDogAsync(string deviceGuid, int userId);
+        Task AssignDeviceToDogAsync(string deviceGuid, int dogId, int userId);
     }
 }

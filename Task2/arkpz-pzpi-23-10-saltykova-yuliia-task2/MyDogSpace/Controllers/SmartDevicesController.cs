@@ -164,13 +164,15 @@ namespace MyDogSpace.Controllers
             }
         }
 
-        [HttpPost("device/{deviceGuid}/assign-to-my-dog")]
-        public async Task<IActionResult> AssignDeviceToMyDog(string deviceGuid)
+        [HttpPost("device/{deviceGuid}/assign")]
+        public async Task<IActionResult> AssignDeviceToDog(string deviceGuid, [FromBody] AssignDeviceDto request)
         {
             try
             {
-                await _deviceService.AssignDeviceToFirstDogAsync(deviceGuid, GetCurrentUserId());
-                return Ok(new { message = "Пристрій успішно прив'язано до вашої собаки" });
+                // Передаем deviceGuid из URL и dogId из тіла запиту
+                await _deviceService.AssignDeviceToDogAsync(deviceGuid, request.DogId, GetCurrentUserId());
+
+                return Ok(new { message = "Пристрій успішно прив'язано до вибраної собаки" });
             }
             catch (Exception ex)
             {
