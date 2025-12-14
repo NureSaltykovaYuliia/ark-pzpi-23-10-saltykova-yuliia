@@ -172,10 +172,13 @@ class DeviceManager:
                 print(f"  Батарея: {battery_level:.1f}%")
                 print(f"[DEVICE] URL: {url}")
 
+            # Правильно серіалізуємо JSON для MicroPython
+            json_data = ujson.dumps(payload)
+            
             response = urequests.put(
                 url,
                 headers={"Content-Type": "application/json"},
-                data=ujson.dumps(payload)
+                data=json_data
             )
 
             if config.DEBUG:
@@ -323,13 +326,14 @@ class DeviceManager:
                 print("[DEVICE] ⚠ Собака не призначена, уведомлення не буде відправлено")
             return False
 
-        url = f"{config.API_BASE_URL}{config.API_NOTIFICATIONS}"
+        url = f"{config.API_BASE_URL}{config.API_NOTIFICATIONS}/iot-alert"
 
+        # Для IoT сервер очікує: title, message, notificationType, dogId
         payload = {
             "title": title,
             "message": message,
             "notificationType": notification_type,
-            "relatedEntityId": related_entity_id
+            "dogId": self.dog_id  # Використовуємо dogId замість relatedEntityId
         }
 
         try:
@@ -338,12 +342,18 @@ class DeviceManager:
                 print(f"  Заголовок: {title}")
                 print(f"  Текст: {message}")
                 print(f"  Тип: {notification_type}")
+                print(f"  DogId: {self.dog_id}")
                 print(f"[DEVICE] URL: {url}")
+                print(f"[DEVICE] Payload: {ujson.dumps(payload)}")
 
+            # Правильно серіалізуємо JSON для MicroPython
+            json_data = ujson.dumps(payload)
+            
+            # Відправляємо POST запит з явними headers
             response = urequests.post(
                 url,
                 headers={"Content-Type": "application/json"},
-                data=ujson.dumps(payload)
+                data=json_data
             )
 
             if config.DEBUG:
@@ -354,16 +364,27 @@ class DeviceManager:
                 response.close()
                 return True
             else:
+                # Спробуємо отримати детальну помилку
                 try:
+                    response_text = response.text if hasattr(response, 'text') else response.content
+                    if config.DEBUG:
+                        print(f"[DEVICE] Відповідь сервера: {response_text}")
+                    
                     error_data = response.json()
                     print(f"[DEVICE] ✗ Помилка відправки: {error_data.get('message', 'Невідома помилка')}")
-                except:
+                except Exception as parse_error:
                     print(f"[DEVICE] ✗ Помилка відправки: статус {response.status_code}")
+                    if config.DEBUG:
+                        print(f"[DEVICE] Помилка при розпарсюванні: {parse_error}")
+                
                 response.close()
                 return False
 
         except Exception as e:
             print(f"[DEVICE] ✗ Виняток при відправці уведомлення: {e}")
+            if config.DEBUG:
+                import traceback
+                traceback.print_exc()
             return False
 
 

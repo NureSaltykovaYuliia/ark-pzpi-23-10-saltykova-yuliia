@@ -63,11 +63,11 @@ class GeofenceMonitor:
         title = "⚠ Собака вийшла за межи безпечної зони!"
         message = f"Собака знаходиться на відстані {distance:.0f}м від центру безпечної зони. Координати: {latitude:.6f}, {longitude:.6f}"
         notification_type = "danger_zone"
-        related_entity_id = dog_id
 
         print("[GEOFENCE] Відправка сповіщення про небезпеку...")
 
-        if device_manager.send_notification(title, message, notification_type, related_entity_id):
+        # Передаємо тільки необхідні параметри - related_entity_id більше не потрібен
+        if device_manager.send_notification(title, message, notification_type, dog_id):
             print(f"[GEOFENCE] ✓ Сповіщення про небезпеку відправлено!")
             self.last_alert_sent = True
             return True
