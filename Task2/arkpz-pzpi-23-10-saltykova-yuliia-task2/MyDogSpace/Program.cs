@@ -31,6 +31,7 @@ public class Program
         builder.Services.AddScoped<IPartnerService, PartnerService>();
         builder.Services.AddScoped<IConversationService, ConversationService>();
         builder.Services.AddScoped<IAdminCodeService, AdminCodeService>();
+        builder.Services.AddScoped<INotificationService, NotificationService>();
 
         // Register Repositories
         builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -41,6 +42,7 @@ public class Program
         builder.Services.AddScoped<IConversationRepository, ConversationRepository>();
         builder.Services.AddScoped<IMessageRepository, MessageRepository>();
         builder.Services.AddScoped<IAdminCodeRepository, AdminCodeRepository>();
+        builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 
         builder.Services.AddSignalR();
 

@@ -1,13 +1,11 @@
 """
 Модуль моніторингу геозони для IoT пристрою
 Перевіряє чи собака не вийшла за межі безпечної зони
+Відправляє уведомлення на сервер БЕЗ авторизації
 """
 
 import config
 import geo
-import urequests
-import ujson
-from auth import auth_manager
 
 
 class GeofenceMonitor:
@@ -47,63 +45,34 @@ class GeofenceMonitor:
 
         return (is_safe, distance)
 
-    def send_danger_alert(self, latitude, longitude, distance, dog_id):
+    def send_danger_alert(self, latitude, longitude, distance, dog_id, device_manager):
         """
-        Відправка сповіщення про небезпеку на сервер
+        Відправка сповіщення про небезпеку на сервер БЕЗ авторизації
+        Використовує device_manager для відправки через API
 
         Args:
             latitude: Координата широти
             longitude: Координата довготи
             distance: Відстань від безпечної зони
             dog_id: ID собаки
+            device_manager: Екземпляр DeviceManager для відправки уведомлень
 
         Returns:
             bool: True якщо сповіщення успішно відправлено
         """
-        if not auth_manager.is_authenticated():
-            print("[GEOFENCE] ✗ Неможливо відправити сповіщення: не авторизовано")
-            return False
+        title = "⚠ Собака вийшла за межи безпечної зони!"
+        message = f"Собака знаходиться на відстані {distance:.0f}м від центру безпечної зони. Координати: {latitude:.6f}, {longitude:.6f}"
+        notification_type = "danger_zone"
+        related_entity_id = dog_id
 
-        url = config.API_BASE_URL + config.API_ALERTS
+        print("[GEOFENCE] Відправка сповіщення про небезпеку...")
 
-        payload = {
-            "type": 0,  # DangerZone
-            "message": f"Собака вийшла за межі безпечної зони! Відстань: {distance:.0f}м",
-            "latitude": latitude,
-            "longitude": longitude,
-            "dogId": dog_id
-        }
-
-        try:
-            if config.DEBUG:
-                print(f"[GEOFENCE] Відправка сповіщення про небезпеку...")
-                print(f"[GEOFENCE] URL: {url}")
-
-            response = urequests.post(
-                url,
-                headers=auth_manager.get_auth_header(),
-                data=ujson.dumps(payload)
-            )
-
-            if config.DEBUG:
-                print(f"[GEOFENCE] Статус відповіді: {response.status_code}")
-
-            if response.status_code == 201:
-                print(f"[GEOFENCE] ✓ Сповіщення про небезпеку відправлено!")
-                self.last_alert_sent = True
-                response.close()
-                return True
-            else:
-                try:
-                    error_data = response.json()
-                    print(f"[GEOFENCE] ✗ Помилка: {error_data.get('message', 'Невідома помилка')}")
-                except:
-                    print(f"[GEOFENCE] ✗ Помилка: статус {response.status_code}")
-                response.close()
-                return False
-
-        except Exception as e:
-            print(f"[GEOFENCE] ✗ Виняток при відправці: {e}")
+        if device_manager.send_notification(title, message, notification_type, related_entity_id):
+            print(f"[GEOFENCE] ✓ Сповіщення про небезпеку відправлено!")
+            self.last_alert_sent = True
+            return True
+        else:
+            print(f"[GEOFENCE] ✗ Помилка при відправці сповіщення")
             return False
 
 

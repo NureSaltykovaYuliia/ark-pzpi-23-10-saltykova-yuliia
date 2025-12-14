@@ -146,7 +146,7 @@ def main_loop():
                 if not is_safe:
                     if not geofence_monitor.last_alert_sent:
                         print("⚠ УВАГА: Собака вийшла за межі безпечної зони!")
-                        if geofence_monitor.send_danger_alert(latitude, longitude, distance, device_manager.dog_id):
+                        if geofence_monitor.send_danger_alert(latitude, longitude, distance, device_manager.dog_id, device_manager):
                             print("✓ Сповіщення про небезпеку відправлено")
                         else:
                             print("✗ Не вдалося відправити сповіщення")

@@ -22,6 +22,7 @@ namespace Infrastructure
         public DbSet<Conversation> Conversations { get; set; }
         public DbSet<Message> Messages { get; set; }
         public DbSet<AdminCode> AdminCodes { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -81,6 +82,13 @@ namespace Infrastructure
             modelBuilder.Entity<Conversation>()
                 .HasMany(c => c.Participants)
                 .WithMany(u => u.Conversations);
+
+            // Notification → User (видалення користувача → видалення його уведомлений)
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany(u => u.Notifications)
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

@@ -31,10 +31,13 @@ namespace Entities.Models
         public ICollection<Event> Events { get; set; } = new List<Event>(); // Події, в яких я беру участь
         public ICollection<Event> OrganizedEvents { get; set; } = new List<Event>(); // Події, які я організував
 
-        // Розмови, в яких я беру участь
+        // Разговоры, в которых я участвую
         public ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
 
-        // Повідомлення, які я відправив
+        // Сообщения, которые я отправил
         public ICollection<Message> SentMessages { get; set; } = new List<Message>();
+
+        // Уведомления пользователя
+        public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
     }
 }

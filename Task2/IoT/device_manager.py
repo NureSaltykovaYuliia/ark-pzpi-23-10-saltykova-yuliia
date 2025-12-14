@@ -303,6 +303,69 @@ class DeviceManager:
                 print(f"[DEVICE] Виняток при перевірці призначення: {e}")
             return None
 
+    def send_notification(self, title, message, notification_type, related_entity_id=None):
+        """
+        Відправка уведомлення на сервер БЕЗ авторизації
+        POST /api/notifications
+        Не потребує авторизації!
+
+        Args:
+            title: Заголовок уведомлення
+            message: Текст уведомлення
+            notification_type: Тип уведомлення (наприклад: "danger_zone", "low_battery", "device_alert")
+            related_entity_id: Опціональний ID пов'язаної сутності (наприклад, ID собаки)
+
+        Returns:
+            bool: True якщо уведомлення успішно відправлено
+        """
+        if not self.dog_id:
+            if config.DEBUG:
+                print("[DEVICE] ⚠ Собака не призначена, уведомлення не буде відправлено")
+            return False
+
+        url = f"{config.API_BASE_URL}{config.API_NOTIFICATIONS}"
+
+        payload = {
+            "title": title,
+            "message": message,
+            "notificationType": notification_type,
+            "relatedEntityId": related_entity_id
+        }
+
+        try:
+            if config.DEBUG:
+                print(f"[DEVICE] Відправка уведомлення:")
+                print(f"  Заголовок: {title}")
+                print(f"  Текст: {message}")
+                print(f"  Тип: {notification_type}")
+                print(f"[DEVICE] URL: {url}")
+
+            response = urequests.post(
+                url,
+                headers={"Content-Type": "application/json"},
+                data=ujson.dumps(payload)
+            )
+
+            if config.DEBUG:
+                print(f"[DEVICE] Статус відповіді: {response.status_code}")
+
+            if response.status_code == 201:
+                print(f"[DEVICE] ✓ Уведомлення відправлено успішно")
+                response.close()
+                return True
+            else:
+                try:
+                    error_data = response.json()
+                    print(f"[DEVICE] ✗ Помилка відправки: {error_data.get('message', 'Невідома помилка')}")
+                except:
+                    print(f"[DEVICE] ✗ Помилка відправки: статус {response.status_code}")
+                response.close()
+                return False
+
+        except Exception as e:
+            print(f"[DEVICE] ✗ Виняток при відправці уведомлення: {e}")
+            return False
+
 
 # Глобальний екземпляр менеджера пристрою
 device_manager = DeviceManager()

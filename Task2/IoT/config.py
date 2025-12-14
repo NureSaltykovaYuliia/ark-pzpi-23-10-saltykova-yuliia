@@ -7,6 +7,7 @@ API_AUTH_REGISTER = "/auth/register"
 API_AUTH_LOGIN = "/auth/login"
 API_SMART_DEVICES = "/smartdevices"
 API_ALERTS = "/alerts"
+API_NOTIFICATIONS = "/notifications"  # Эндпоинт для отправки уведомлений (без авторизации)
 
 # === WiFi конфігурація ===
 WIFI_SSID = "Wokwi-GUEST"
