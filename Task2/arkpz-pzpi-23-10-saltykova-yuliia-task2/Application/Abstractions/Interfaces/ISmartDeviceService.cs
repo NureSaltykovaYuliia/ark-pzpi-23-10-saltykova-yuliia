@@ -14,6 +14,7 @@ namespace Application.Abstractions.Interfaces
         // Методи для роботи пристрою (без авторизації)
         Task<SmartDeviceDto> RegisterDeviceAsync(string deviceGuid);
         Task<int?> GetDogIdByDeviceGuidAsync(string deviceGuid);
+        Task UpdateDeviceTelemetryAsync(int id, UpdateSmartDeviceDto deviceDto);
 
         // Метод для прив'язки пристрою до собаки (з авторизацією)
         Task AssignDeviceToDogAsync(string deviceGuid, int dogId, int userId);

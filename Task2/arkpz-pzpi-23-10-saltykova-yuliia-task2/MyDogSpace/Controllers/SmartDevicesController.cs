@@ -179,5 +179,24 @@ namespace MyDogSpace.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        // Endpoint для відправки телеметрії БЕЗ авторизації (для IoT пристроїв)
+        [AllowAnonymous]
+        [HttpPut("device/{id}/telemetry")]
+        public async Task<IActionResult> UpdateDeviceTelemetry(int id, [FromBody] UpdateSmartDeviceDto deviceDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                await _deviceService.UpdateDeviceTelemetryAsync(id, deviceDto);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

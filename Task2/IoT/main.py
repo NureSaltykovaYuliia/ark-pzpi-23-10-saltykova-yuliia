@@ -1,13 +1,13 @@
 """
 Головний файл IoT пристрою MyDogSpace для ESP32
-Виконує підключення до WiFi, авторизацію та відправку телеметрії
+Виконує підключення до WiFi та відправку телеметрії
+БЕЗ АВТОРИЗАЦІЇ! Повністю автономний режим
 """
 
 import network
 import time
 from machine import Pin
 import config
-from auth import auth_manager
 from device_manager import device_manager
 from gps_sensor import gps_sensor
 from battery_monitor import battery_monitor

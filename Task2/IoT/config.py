@@ -22,12 +22,12 @@ DEVICE_GUID = "ESP32-WOKWI-001"
 # Призначення: POST /api/smartdevices/device/{deviceGuid}/assign
 DOG_ID = None  # Автоматично отримується з сервера!
 
-# === Користувач для тестування ===
-TEST_USER = {
-    "username": "testuser456",
-    "email": "test456@example.com",
-    "password": "password123"
-}
+# === АВТОРИЗАЦІЯ НЕ ПОТРІБНА! ===
+# Пристрій працює ПОВНІСТЮ АВТОНОМНО без реєстрації користувача!
+# Всі endpoint'и для IoT пристроїв доступні без авторизації:
+#   - POST /api/smartdevices/register-device
+#   - GET /api/smartdevices/device/{deviceGuid}/dog
+#   - PUT /api/smartdevices/device/{id}/telemetry
 
 # === Налаштування сенсорів ===
 # GPS симуляція

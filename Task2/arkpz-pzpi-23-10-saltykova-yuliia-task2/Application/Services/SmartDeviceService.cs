@@ -200,6 +200,30 @@ namespace Application.Services
             await _deviceRepository.UpdateAsync(device);
         }
 
+        public async Task UpdateDeviceTelemetryAsync(int id, UpdateSmartDeviceDto deviceDto)
+        {
+            // Відправка телеметрії БЕЗ перевірки прав доступу (для IoT пристроїв)
+            var device = await _deviceRepository.GetByIdAsync(id);
+            if (device == null)
+                throw new Exception("Пристрій не знайдено");
+
+            // Розрахунок дистанції, якщо координати вже були встановлені
+            if (device.LastLatitude != 0 && device.LastLongitude != 0)
+            {
+                double distance = CalculateDistance(
+                    device.LastLatitude, device.LastLongitude,
+                    deviceDto.LastLatitude, deviceDto.LastLongitude
+                );
+                device.TotalDistance += distance;
+            }
+
+            device.LastLatitude = deviceDto.LastLatitude;
+            device.LastLongitude = deviceDto.LastLongitude;
+            device.BatteryLevel = deviceDto.BatteryLevel;
+
+            await _deviceRepository.UpdateAsync(device);
+        }
+
         /// <summary>
         /// Розрахунок відстані між двома точками за формулою Haversine
         /// </summary>

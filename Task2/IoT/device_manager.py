@@ -1,12 +1,12 @@
 """
 Модуль управління Smart Device для IoT пристрою
 Відповідає за реєстрацію пристрою та відправку даних на сервер
+БЕЗ АВТОРИЗАЦІЇ! Повністю автономний режим
 """
 
 import urequests
 import ujson
 import config
-from auth import auth_manager
 from gps_sensor import gps_sensor
 from battery_monitor import battery_monitor
 
@@ -137,18 +137,15 @@ class DeviceManager:
 
     def send_telemetry(self):
         """
-        Відправка телеметричних даних на сервер
+        Відправка телеметричних даних на сервер БЕЗ авторизації
         (GPS координати та рівень батареї)
+        PUT /api/smartdevices/device/{id}/telemetry
 
         Returns:
             bool: True якщо дані успішно відправлені
         """
         if not self.is_registered:
             print("[DEVICE] ✗ Пристрій не зареєстровано")
-            return False
-
-        if not auth_manager.is_authenticated():
-            print("[DEVICE] ✗ Користувач не авторизований")
             return False
 
         # Отримання даних з сенсорів
@@ -159,7 +156,8 @@ class DeviceManager:
             print("[DEVICE] ✗ GPS координати недоступні")
             return False
 
-        url = f"{config.API_BASE_URL}{config.API_SMART_DEVICES}/{self.device_id}"
+        # Новий endpoint БЕЗ авторизації!
+        url = f"{config.API_BASE_URL}{config.API_SMART_DEVICES}/device/{self.device_id}/telemetry"
 
         payload = {
             "lastLatitude": latitude,
@@ -176,7 +174,7 @@ class DeviceManager:
 
             response = urequests.put(
                 url,
-                headers=auth_manager.get_auth_header(),
+                headers={"Content-Type": "application/json"},
                 data=ujson.dumps(payload)
             )
 
@@ -200,41 +198,6 @@ class DeviceManager:
             print(f"[DEVICE] ✗ Виняток при відправці телеметрії: {e}")
             return False
 
-    def get_device_info(self):
-        """
-        Отримання інформації про пристрій з сервера
-
-        Returns:
-            dict: Інформація про пристрій або None
-        """
-        if not self.device_id:
-            print("[DEVICE] Пристрій ще не зареєстровано")
-            return None
-
-        if not auth_manager.is_authenticated():
-            print("[DEVICE] Користувач не авторизований")
-            return None
-
-        url = f"{config.API_BASE_URL}{config.API_SMART_DEVICES}/{self.device_id}"
-
-        try:
-            response = urequests.get(
-                url,
-                headers=auth_manager.get_auth_header()
-            )
-
-            if response.status_code == 200:
-                data = response.json()
-                response.close()
-                return data
-            else:
-                print(f"[DEVICE] Помилка отримання інформації: {response.status_code}")
-                response.close()
-                return None
-
-        except Exception as e:
-            print(f"[DEVICE] Виняток при отриманні інформації: {e}")
-            return None
 
     def register_device_without_dog(self):
         """
