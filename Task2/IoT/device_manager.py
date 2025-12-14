@@ -17,8 +17,9 @@ class DeviceManager:
     def __init__(self):
         self.device_id = None
         self.device_guid = config.DEVICE_GUID
-        self.dog_id = config.DOG_ID
+        self.dog_id = None  # Буде отримано з сервера автоматично
         self.is_registered = False
+        self.dog_assigned = False
 
     def register_device(self, dog_id):
         """
@@ -67,16 +68,71 @@ class DeviceManager:
                 response.close()
                 return True
             else:
+                # Якщо пристрій вже зареєстровано, спробуємо отримати його дані
                 try:
                     error_data = response.json()
-                    print(f"[DEVICE] ✗ Помилка реєстрації: {error_data.get('message', 'Невідома помилка')}")
+                    error_msg = error_data.get('message', '')
+                    print(f"[DEVICE] ⚠ Помилка реєстрації: {error_msg}")
+
+                    # Якщо пристрій вже існує, спробуємо його знайти
+                    if "вже" in error_msg.lower() or response.status_code == 400:
+                        print(f"[DEVICE] Пристрій можливо вже зареєстровано, пошук...")
+                        response.close()
+
+                        # Спроба отримати існуючий пристрій
+                        if self._try_get_existing_device(dog_id):
+                            return True
+
                 except:
                     print(f"[DEVICE] ✗ Помилка реєстрації: статус {response.status_code}")
+
                 response.close()
                 return False
 
         except Exception as e:
             print(f"[DEVICE] ✗ Виняток при реєстрації: {e}")
+            return False
+
+    def _try_get_existing_device(self, dog_id):
+        """
+        Спроба отримати дані існуючого пристрою
+
+        Args:
+            dog_id: ID собаки
+
+        Returns:
+            bool: True якщо пристрій знайдено
+        """
+        try:
+            # Спробуємо отримати пристрій за dog_id
+            url = f"{config.API_BASE_URL}{config.API_SMART_DEVICES}/dog/{dog_id}"
+            response = urequests.get(
+                url,
+                headers=auth_manager.get_auth_header()
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                device_guid = data.get("deviceGuid")
+
+                # Перевіряємо, чи це той самий пристрій
+                if device_guid == self.device_guid:
+                    self.device_id = data.get("id")
+                    self.dog_id = dog_id
+                    self.is_registered = True
+                    print(f"[DEVICE] ✓ Пристрій вже зареєстровано (ID: {self.device_id})")
+                    response.close()
+                    return True
+                else:
+                    print(f"[DEVICE] ✗ До цієї собаки прикріплений інший пристрій: {device_guid}")
+                    response.close()
+                    return False
+
+            response.close()
+            return False
+
+        except Exception as e:
+            print(f"[DEVICE] ✗ Помилка при пошуку існуючого пристрою: {e}")
             return False
 
     def send_telemetry(self):
@@ -178,6 +234,110 @@ class DeviceManager:
 
         except Exception as e:
             print(f"[DEVICE] Виняток при отриманні інформації: {e}")
+            return None
+
+    def register_device_without_dog(self):
+        """
+        Реєстрація пристрою БЕЗ прив'язки до собаки
+        POST /api/smartdevices/register-device
+        Не потребує авторизації!
+
+        Returns:
+            bool: True якщо реєстрація успішна
+        """
+        url = f"{config.API_BASE_URL}{config.API_SMART_DEVICES}/register-device"
+
+        payload = {
+            "deviceGuid": self.device_guid
+        }
+
+        try:
+            if config.DEBUG:
+                print(f"[DEVICE] Реєстрація пристрою без собаки: {self.device_guid}")
+                print(f"[DEVICE] URL: {url}")
+
+            response = urequests.post(
+                url,
+                headers={"Content-Type": "application/json"},
+                data=ujson.dumps(payload)
+            )
+
+            if config.DEBUG:
+                print(f"[DEVICE] Статус відповіді: {response.status_code}")
+
+            if response.status_code == 200:
+                data = response.json()
+                self.device_id = data.get("id")
+                self.dog_id = data.get("dogId")  # Може бути None
+                self.is_registered = True
+                self.dog_assigned = (self.dog_id is not None and self.dog_id != 0)
+
+                print(f"[DEVICE] ✓ Пристрій зареєстровано (ID: {self.device_id})")
+                if self.dog_assigned:
+                    print(f"[DEVICE] ✓ Собака вже призначена (Dog ID: {self.dog_id})")
+                else:
+                    print(f"[DEVICE] ⚠ Собака ще не призначена")
+
+                response.close()
+                return True
+            else:
+                try:
+                    error_data = response.json()
+                    print(f"[DEVICE] ✗ Помилка реєстрації: {error_data.get('message', 'Невідома помилка')}")
+                except:
+                    print(f"[DEVICE] ✗ Помилка реєстрації: статус {response.status_code}")
+                response.close()
+                return False
+
+        except Exception as e:
+            print(f"[DEVICE] ✗ Виняток при реєстрації: {e}")
+            return False
+
+    def check_dog_assignment(self):
+        """
+        Перевірка чи призначена собака до пристрою
+        GET /api/smartdevices/device/{deviceGuid}/dog
+        Не потребує авторизації!
+
+        Returns:
+            int|None: ID собаки або None якщо не призначена
+        """
+        url = f"{config.API_BASE_URL}{config.API_SMART_DEVICES}/device/{self.device_guid}/dog"
+
+        try:
+            response = urequests.get(url)
+
+            if response.status_code == 200:
+                data = response.json()
+                dog_id = data.get("dogId")
+
+                if dog_id is not None and dog_id != 0:
+                    # Собака призначена!
+                    if not self.dog_assigned:
+                        print(f"[DEVICE] ✓ Собака призначена! Dog ID: {dog_id}")
+
+                    self.dog_id = dog_id
+                    self.dog_assigned = True
+                    response.close()
+                    return dog_id
+                else:
+                    # Собака ще не призначена
+                    if self.dog_assigned:
+                        print(f"[DEVICE] ⚠ Собаку відкріплено від пристрою")
+
+                    self.dog_id = None
+                    self.dog_assigned = False
+                    response.close()
+                    return None
+            else:
+                if config.DEBUG:
+                    print(f"[DEVICE] Помилка перевірки призначення: {response.status_code}")
+                response.close()
+                return None
+
+        except Exception as e:
+            if config.DEBUG:
+                print(f"[DEVICE] Виняток при перевірці призначення: {e}")
             return None
 
 

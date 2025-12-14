@@ -61,9 +61,8 @@ def connect_wifi():
 def initialize_device():
     """
     Ініціалізація пристрою:
-    - Реєстрація користувача (якщо потрібно)
-    - Авторизація
-    - Реєстрація пристрою
+    - Реєстрація пристрою БЕЗ собаки (не потребує авторизації!)
+    - Перевірка чи призначена собака
 
     Returns:
         bool: True якщо ініціалізація успішна
@@ -72,49 +71,33 @@ def initialize_device():
     print("Ініціалізація пристрою")
     print("="*50 + "\n")
 
-    # Спроба авторизації
-    print("[INIT] Спроба входу...")
-    if auth_manager.login(config.TEST_USER["email"], config.TEST_USER["password"]):
-        led_status.value(1)
-    else:
-        print("[INIT] Вхід не вдався, спроба реєстрації...")
+    # Реєстрація пристрою без прив'язки до собаки
+    # Це не потребує авторизації!
+    print("[INIT] Реєстрація пристрою на сервері...")
+    if device_manager.register_device_without_dog():
+        print("[INIT] ✓ Пристрій зареєстровано на сервері")
 
-        # Якщо не вдалось увійти - реєструємо нового користувача
-        if auth_manager.register(
-            config.TEST_USER["username"],
-            config.TEST_USER["email"],
-            config.TEST_USER["password"]
-        ):
-            print("[INIT] Користувач зареєстровано, вхід...")
-            time.sleep(1)
+        # Перевіряємо чи вже призначена собака
+        dog_id = device_manager.check_dog_assignment()
 
-            # Повторна спроба входу
-            if auth_manager.login(config.TEST_USER["email"], config.TEST_USER["password"]):
-                led_status.value(1)
-            else:
-                print("[INIT] ✗ Не вдалося увійти після реєстрації")
-                led_status.value(0)
-                return False
+        if dog_id:
+            print(f"[INIT] ✓ Собака призначена (ID: {dog_id})")
+            print("[INIT] ✓ Готовий до відправки телеметрії!")
         else:
-            print("[INIT] ✗ Помилка реєстрації")
-            led_status.value(0)
-            return False
+            print("[INIT] ⚠ Собака ще не призначена до пристрою")
+            print("[INIT] Очікування призначення собаки через веб-інтерфейс...")
+            print("[INIT] ІНСТРУКЦІЯ:")
+            print("  1. Відкрийте Swagger: http://your-server:8080/swagger")
+            print("  2. Авторизуйтесь (POST /api/auth/login)")
+            print("  3. Створіть собаку (POST /api/dogs)")
+            print(f"  4. Прив'яжіть пристрій: POST /api/smartdevices/device/{device_manager.device_guid}/assign")
+            print("     Body: {\"dogId\": YOUR_DOG_ID}")
+            print("\nПристрій буде перевіряти призначення кожні 30 секунд...")
 
-    # Реєстрація пристрою
-    # ВАЖЛИВО: Для реєстрації пристрою потрібен ID собаки
-    # У реальному сценарії це значення повинно бути налаштоване
-    if config.DOG_ID is None:
-        print("[INIT] ⚠ УВАГА: DOG_ID не встановлено в config.py")
-        print("[INIT] Пристрій не буде зареєстровано на сервері")
-        print("[INIT] Буде працювати тільки збір локальних даних")
-        return True
-
-    print(f"[INIT] Реєстрація пристрою для собаки ID: {config.DOG_ID}")
-    if device_manager.register_device(config.DOG_ID):
-        print("[INIT] ✓ Пристрій успішно зареєстровано")
         return True
     else:
         print("[INIT] ✗ Помилка реєстрації пристрою")
+        led_status.value(0)
         return False
 
 
@@ -128,6 +111,7 @@ def main_loop():
     print("="*50 + "\n")
 
     iteration = 0
+    dog_check_counter = 0  # Лічильник для перевірки призначення собаки
 
     while True:
         try:
@@ -137,6 +121,16 @@ def main_loop():
             # Мигання статусним LED
             led_status.value(not led_status.value())
 
+            # Перевірка призначення собаки (кожні 6 ітерацій = ~30 сек при інтервалі 5 сек)
+            if not device_manager.dog_assigned:
+                dog_check_counter += 1
+                if dog_check_counter >= 6:  # Перевіряємо кожні ~30 секунд
+                    print("[CHECK] Перевірка призначення собаки...")
+                    device_manager.check_dog_assignment()
+                    dog_check_counter = 0
+            else:
+                dog_check_counter = 0  # Скидаємо лічильник якщо собака призначена
+
             # Читання даних з сенсорів
             latitude, longitude = gps_sensor.read_coordinates()
             battery = battery_monitor.read_battery_level()
@@ -144,31 +138,34 @@ def main_loop():
             print(f"GPS: {latitude:.6f}, {longitude:.6f}")
             print(f"Battery: {battery:.1f}%")
 
-            # Перевірка геозони
-            is_safe, distance = geofence_monitor.check_position(latitude, longitude)
+            # Перевірка геозони (тільки якщо собака призначена)
+            if device_manager.dog_assigned:
+                is_safe, distance = geofence_monitor.check_position(latitude, longitude)
 
-            # Якщо собака в небезпечній зоні - відправляємо сповіщення
-            if not is_safe and config.DOG_ID is not None:
-                if not geofence_monitor.last_alert_sent:
-                    print("⚠ УВАГА: Собака вийшла за межі безпечної зони!")
-                    if geofence_monitor.send_danger_alert(latitude, longitude, distance, config.DOG_ID):
-                        print("✓ Сповіщення про небезпеку відправлено")
-                    else:
-                        print("✗ Не вдалося відправити сповіщення")
-            elif is_safe:
-                # Скидаємо флаг коли собака повернулась в безпечну зону
-                if geofence_monitor.last_alert_sent:
-                    print("✓ Собака повернулась в безпечну зону")
-                    geofence_monitor.last_alert_sent = False
+                # Якщо собака в небезпечній зоні - відправляємо сповіщення
+                if not is_safe:
+                    if not geofence_monitor.last_alert_sent:
+                        print("⚠ УВАГА: Собака вийшла за межі безпечної зони!")
+                        if geofence_monitor.send_danger_alert(latitude, longitude, distance, device_manager.dog_id):
+                            print("✓ Сповіщення про небезпеку відправлено")
+                        else:
+                            print("✗ Не вдалося відправити сповіщення")
+                elif is_safe:
+                    # Скидаємо флаг коли собака повернулась в безпечну зону
+                    if geofence_monitor.last_alert_sent:
+                        print("✓ Собака повернулась в безпечну зону")
+                        geofence_monitor.last_alert_sent = False
 
-            # Якщо пристрій зареєстровано - відправляємо телеметрію
-            if device_manager.is_registered:
+            # Відправка телеметрії (тільки якщо собака призначена)
+            if device_manager.dog_assigned and device_manager.is_registered:
                 print("Відправка телеметрії на сервер...")
                 if device_manager.send_telemetry():
                     led_status.value(1)
                 else:
                     print("Помилка відправки телеметрії")
                     led_status.value(0)
+            elif not device_manager.dog_assigned:
+                print("⏳ Очікування призначення собаки...")
             else:
                 print("Пристрій не зареєстровано - тільки локальний збір даних")
 

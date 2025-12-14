@@ -102,6 +102,16 @@ namespace Application.Services
                     throw new UnauthorizedAccessException("Ви не маєте доступу до цього пристрою");
             }
 
+            // Розрахунок дистанції, якщо координати вже були встановлені
+            if (device.LastLatitude != 0 && device.LastLongitude != 0)
+            {
+                double distance = CalculateDistance(
+                    device.LastLatitude, device.LastLongitude,
+                    deviceDto.LastLatitude, deviceDto.LastLongitude
+                );
+                device.TotalDistance += distance;
+            }
+
             device.LastLatitude = deviceDto.LastLatitude;
             device.LastLongitude = deviceDto.LastLongitude;
             device.BatteryLevel = deviceDto.BatteryLevel;
@@ -190,6 +200,33 @@ namespace Application.Services
             await _deviceRepository.UpdateAsync(device);
         }
 
+        /// <summary>
+        /// Розрахунок відстані між двома точками за формулою Haversine
+        /// </summary>
+        /// <returns>Дистанція в метрах</returns>
+        private static double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
+        {
+            const double R = 6371000; // Радіус Землі в метрах
+
+            double lat1Rad = DegreesToRadians(lat1);
+            double lat2Rad = DegreesToRadians(lat2);
+            double deltaLat = DegreesToRadians(lat2 - lat1);
+            double deltaLon = DegreesToRadians(lon2 - lon1);
+
+            double a = Math.Sin(deltaLat / 2) * Math.Sin(deltaLat / 2) +
+                      Math.Cos(lat1Rad) * Math.Cos(lat2Rad) *
+                      Math.Sin(deltaLon / 2) * Math.Sin(deltaLon / 2);
+
+            double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+
+            return R * c; // Повертає відстань в метрах
+        }
+
+        private static double DegreesToRadians(double degrees)
+        {
+            return degrees * Math.PI / 180.0;
+        }
+
         private static SmartDeviceDto MapToDto(SmartDevice d, string? dogName = null)
         {
             return new SmartDeviceDto
@@ -199,6 +236,7 @@ namespace Application.Services
                 LastLatitude = d.LastLatitude,
                 LastLongitude = d.LastLongitude,
                 BatteryLevel = d.BatteryLevel,
+                TotalDistance = d.TotalDistance,
                 DogId = d.DogId,
                 DogName = dogName ?? d.Dog?.Name
             };

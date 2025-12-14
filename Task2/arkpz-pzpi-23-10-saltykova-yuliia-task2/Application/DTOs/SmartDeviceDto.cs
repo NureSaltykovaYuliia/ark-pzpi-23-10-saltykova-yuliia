@@ -7,6 +7,7 @@ namespace Application.DTOs
         public double LastLatitude { get; set; }
         public double LastLongitude { get; set; }
         public double BatteryLevel { get; set; }
+        public double TotalDistance { get; set; } // в метрах
         public int? DogId { get; set; }
         public string? DogName { get; set; }
     }

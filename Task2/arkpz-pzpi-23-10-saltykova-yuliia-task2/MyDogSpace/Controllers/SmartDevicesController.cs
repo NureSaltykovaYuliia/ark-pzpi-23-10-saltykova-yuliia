@@ -8,7 +8,7 @@ namespace MyDogSpace.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+   
     public class SmartDevicesController : ControllerBase
     {
         private readonly ISmartDeviceService _deviceService;
