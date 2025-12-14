@@ -25,7 +25,7 @@ services:
 
     volumes:
       # Постоянное хранилище для SQLite базы данных
-      - ${PWD}/Infrastructure/DB_Storage:/app/data
+      - ./Infrastructure/DB_Storage:/app/data
 
     networks:
       - mydogspace-network
